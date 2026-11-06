@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: mudra
+      POSTGRES_USER: mudra
+      POSTGRES_PASSWORD: ${MUDRA_DB_PASSWORD:?Set MUDRA_DB_PASSWORD for the local database}
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - mudra-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mudra -d mudra"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  mudra-postgres:

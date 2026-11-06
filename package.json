@@ -1,0 +1,23 @@
+{
+  "name": "mudra-for-restaurants",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@12.11.2",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "format": "prettier --write \"apps/**/*\" \"packages/**/*\" \"*.json\"",
+    "format:check": "prettier --check \"apps/**/*\" \"packages/**/*\" \"*.json\""
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2",
+    "turbo": "^2.5.8",
+    "typescript": "^5.9.3"
+  }
+}

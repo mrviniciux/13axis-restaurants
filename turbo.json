@@ -1,0 +1,35 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "env": ["NEXT_PUBLIC_REALTIME_URL"],
+      "outputs": [".next/**", "dist/**", "build/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true,
+      "passThroughEnv": [
+        "HOST",
+        "REALTIME_CORS_ORIGINS",
+        "REALTIME_JWT_AUDIENCE",
+        "REALTIME_JWT_ISSUER",
+        "REALTIME_JWT_SECRET",
+        "REALTIME_INTERNAL_URL",
+        "NEXT_PUBLIC_REALTIME_URL",
+        "REDIS_URL",
+        "SOCKET_IO_PORT"
+      ]
+    },
+    "lint": {
+      "dependsOn": ["^lint"]
+    },
+    "typecheck": {
+      "dependsOn": ["^typecheck"]
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
+    }
+  }
+}

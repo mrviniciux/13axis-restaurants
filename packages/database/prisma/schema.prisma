@@ -1,0 +1,198 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  WAITER
+  CASHIER
+  KITCHEN
+  SCALE
+}
+
+enum TablesComandasView {
+  COMANDA
+  MESA
+  MESA_E_COMANDA
+}
+
+enum TableStatus {
+  FREE
+  OCCUPIED
+  RESERVED
+  CLOSING
+}
+
+enum OrderStatus {
+  OPEN
+  CLOSED
+}
+
+enum OrderItemStatus {
+  SENT
+  PREPARING
+  READY
+  SERVED
+}
+
+model Restaurant {
+  id             String    @id @db.Uuid
+  name           String
+  comandaNumbers String    @default("{20-110}")
+  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @db.Timestamptz(3)
+  version        Int       @default(1)
+  lastSyncedAt   DateTime? @db.Timestamptz(3)
+  deviceId       String?
+  deletedAt      DateTime? @db.Timestamptz(3)
+
+  users          User[]
+  tables         Table[]
+  menuCategories MenuCategory[]
+  menuItems      MenuItem[]
+  orders         Order[]
+
+  @@index([deletedAt])
+}
+
+model User {
+  id                 String             @id @db.Uuid
+  restaurantId       String             @db.Uuid
+  name               String
+  email              String
+  passwordHash       String
+  role               Role
+  tablesComandasView TablesComandasView @default(COMANDA)
+  createdAt          DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime           @updatedAt @db.Timestamptz(3)
+  version            Int                @default(1)
+  lastSyncedAt       DateTime?          @db.Timestamptz(3)
+  deviceId           String?
+  deletedAt          DateTime?          @db.Timestamptz(3)
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  orders     Order[]
+
+  @@index([restaurantId, deletedAt])
+  @@index([restaurantId, role])
+}
+
+model Table {
+  id           String      @id @db.Uuid
+  restaurantId String      @db.Uuid
+  number       Int
+  capacity     Int
+  status       TableStatus @default(FREE)
+  location     String?
+  createdAt    DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime    @updatedAt @db.Timestamptz(3)
+  version      Int         @default(1)
+  lastSyncedAt DateTime?   @db.Timestamptz(3)
+  deviceId     String?
+  deletedAt    DateTime?   @db.Timestamptz(3)
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  orders     Order[]
+
+  @@index([restaurantId, deletedAt])
+  @@index([restaurantId, status])
+}
+
+model MenuCategory {
+  id           String    @id @db.Uuid
+  restaurantId String    @db.Uuid
+  name         String
+  createdAt    DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime  @updatedAt @db.Timestamptz(3)
+  version      Int       @default(1)
+  lastSyncedAt DateTime? @db.Timestamptz(3)
+  deviceId     String?
+  deletedAt    DateTime? @db.Timestamptz(3)
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  menuItems  MenuItem[]
+
+  @@index([restaurantId, deletedAt])
+}
+
+model MenuItem {
+  id           String    @id @db.Uuid
+  restaurantId String    @db.Uuid
+  categoryId   String    @db.Uuid
+  name         String
+  price        Decimal   @db.Decimal(12, 2)
+  description  String?
+  image        String?
+  code         String?
+  available    Boolean   @default(true)
+  createdAt    DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime  @updatedAt @db.Timestamptz(3)
+  version      Int       @default(1)
+  lastSyncedAt DateTime? @db.Timestamptz(3)
+  deviceId     String?
+  deletedAt    DateTime? @db.Timestamptz(3)
+
+  restaurant Restaurant   @relation(fields: [restaurantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  category   MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  orderItems OrderItem[]
+
+  @@index([restaurantId, deletedAt])
+  @@index([categoryId, available])
+}
+
+model Order {
+  // Multiple open orders per table are intentional. Order.id is the stable
+  // client-generated UUID v7 identity to reuse when a create mutation retries.
+  // Open comandaNumber uniqueness is enforced by a partial SQL index.
+  id            String      @id @db.Uuid
+  restaurantId  String      @db.Uuid
+  comandaNumber Int?
+  tableId       String?     @db.Uuid
+  waiterId      String?     @db.Uuid
+  status        OrderStatus @default(OPEN)
+  total         Decimal     @default(0) @db.Decimal(12, 2)
+  closedAt      DateTime?   @db.Timestamptz(3)
+  createdAt     DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime    @updatedAt @db.Timestamptz(3)
+  version       Int         @default(1)
+  lastSyncedAt  DateTime?   @db.Timestamptz(3)
+  deviceId      String?
+  deletedAt     DateTime?   @db.Timestamptz(3)
+
+  restaurant Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  table      Table?      @relation(fields: [tableId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  waiter     User?       @relation(fields: [waiterId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  items      OrderItem[]
+
+  @@index([restaurantId, status, deletedAt])
+  @@index([tableId, status])
+}
+
+model OrderItem {
+  id           String           @id @db.Uuid
+  orderId      String           @db.Uuid
+  menuItemId   String           @db.Uuid
+  quantity     Decimal          @db.Decimal(10, 3)
+  unitPrice    Decimal          @db.Decimal(12, 2)
+  variations   Json?
+  notes        String?
+  status       OrderItemStatus?
+  createdAt    DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime         @updatedAt @db.Timestamptz(3)
+  version      Int              @default(1)
+  lastSyncedAt DateTime?        @db.Timestamptz(3)
+  deviceId     String?
+  deletedAt    DateTime?        @db.Timestamptz(3)
+
+  order    Order    @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([orderId, deletedAt])
+  @@index([menuItemId])
+}
