@@ -33,69 +33,120 @@ export type RealtimeServerConfig = {
   jwtIssuer?: string;
   jwtAudience?: string;
   corsOrigins?: readonly string[];
+  /** Estado atual da conexão com Redis, reportado em GET /health. */
+  redisStatus?: () => "connected" | "disconnected" | "disabled";
 };
 
-function publishHttpEvent(
-  request: import("node:http").IncomingMessage,
-  response: import("node:http").ServerResponse,
+type HttpRequest = import("node:http").IncomingMessage;
+type HttpResponse = import("node:http").ServerResponse;
+type RedisStatus = () => "connected" | "disconnected" | "disabled";
+
+function writeJson(
+  response: HttpResponse,
+  status: number,
+  body: Record<string, unknown>,
+  extraHeaders: Record<string, string> = {},
+): void {
+  const payload = JSON.stringify(body);
+  response.writeHead(status, {
+    "content-type": "application/json",
+    "cache-control": "no-store",
+    "content-length": Buffer.byteLength(payload),
+    ...extraHeaders,
+  });
+  response.end(payload);
+}
+
+function handleHttpRequest(
+  request: HttpRequest,
+  response: HttpResponse,
   io: SocketIOServer,
   secret: Uint8Array,
+  redisStatus: RedisStatus,
 ): void {
-  if (request.method !== "POST" || request.url !== "/internal/events") return;
-  const authorization = request.headers.authorization;
-  const provided = authorization?.startsWith("Bearer ")
-    ? Buffer.from(authorization.slice(7), "utf8")
-    : Buffer.alloc(0);
-  const expected = Buffer.from(secret);
-  if (provided.length !== expected.length || !timingSafeEqual(provided, expected)) {
-    response.writeHead(401, { "content-type": "application/json" });
-    response.end(JSON.stringify({ error: "unauthorized" }));
-    return;
-  }
-  if (!request.headers["content-type"]?.toLowerCase().startsWith("application/json")) {
-    response.writeHead(415, { "content-type": "application/json" });
-    response.end(JSON.stringify({ error: "unsupported_media_type" }));
+  const path = (request.url ?? "/").split("?", 1)[0] ?? "/";
+
+  // Health check sem autenticação: processo vivo e estado do Redis, sem
+  // expor versão, credenciais ou detalhes internos.
+  if (path === "/health") {
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      writeJson(response, 405, { error: "method_not_allowed" }, { allow: "GET, HEAD" });
+      return;
+    }
+    const payload = JSON.stringify({ status: "ok", redis: redisStatus() });
+    response.writeHead(200, {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "content-length": Buffer.byteLength(payload),
+    });
+    response.end(request.method === "HEAD" ? undefined : payload);
     return;
   }
 
-  const chunks: Buffer[] = [];
-  let size = 0;
-  let rejected = false;
-  request.on("data", (chunk: Buffer | string) => {
-    if (rejected) return;
-    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
-    size += buffer.length;
-    if (size > 16_384) {
-      rejected = true;
-      response.writeHead(413, { "content-type": "application/json" });
-      response.end(JSON.stringify({ error: "payload_too_large" }));
+  // O Socket.IO registra o próprio listener de requisições; não responder
+  // por ele para não conflitar com o handshake e o long-polling.
+  if (path.startsWith("/socket.io")) return;
+
+  if (path === "/internal/events") {
+    if (request.method !== "POST") {
+      writeJson(response, 405, { error: "method_not_allowed" }, { allow: "POST" });
       return;
     }
-    chunks.push(buffer);
-  });
-  request.on("end", () => {
-    if (response.writableEnded) return;
-    try {
-      const body: unknown = JSON.parse(Buffer.concat(chunks).toString("utf8"));
-      if (
-        body === null ||
-        typeof body !== "object" ||
-        !("name" in body) ||
-        typeof body.name !== "string" ||
-        !("payload" in body)
-      ) {
-        throw new Error("invalid_event");
-      }
-      const name = body.name as RealtimeEventName;
-      const payload = parseRealtimeEvent(name, body.payload);
-      publishDomainEvent(io, name, payload);
-      response.writeHead(202, { "content-type": "application/json" });
-      response.end(JSON.stringify({ accepted: true }));
-    } catch {
-      response.writeHead(400, { "content-type": "application/json" });
-      response.end(JSON.stringify({ error: "invalid_event" }));
+    const authorization = request.headers.authorization;
+    const provided = authorization?.startsWith("Bearer ")
+      ? Buffer.from(authorization.slice(7), "utf8")
+      : Buffer.alloc(0);
+    const expected = Buffer.from(secret);
+    if (provided.length !== expected.length || !timingSafeEqual(provided, expected)) {
+      writeJson(response, 401, { error: "unauthorized" });
+      return;
     }
-  });
+    if (!request.headers["content-type"]?.toLowerCase().startsWith("application/json")) {
+      writeJson(response, 415, { error: "unsupported_media_type" });
+      return;
+    }
+
+    const chunks: Buffer[] = [];
+    let size = 0;
+    let rejected = false;
+    request.on("data", (chunk: Buffer | string) => {
+      if (rejected) return;
+      const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      size += buffer.length;
+      if (size > 16_384) {
+        rejected = true;
+        writeJson(response, 413, { error: "payload_too_large" });
+        return;
+      }
+      chunks.push(buffer);
+    });
+    request.on("end", () => {
+      if (response.writableEnded) return;
+      try {
+        const body: unknown = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+        if (
+          body === null ||
+          typeof body !== "object" ||
+          !("name" in body) ||
+          typeof body.name !== "string" ||
+          !("payload" in body)
+        ) {
+          throw new Error("invalid_event");
+        }
+        const name = body.name as RealtimeEventName;
+        const payload = parseRealtimeEvent(name, body.payload);
+        publishDomainEvent(io, name, payload);
+        writeJson(response, 202, { accepted: true });
+      } catch {
+        writeJson(response, 400, { error: "invalid_event" });
+      }
+    });
+    return;
+  }
+
+  // Caminho desconhecido: responder 404 em vez de deixar a requisição
+  // pendurada até o cliente desistir.
+  writeJson(response, 404, { error: "not_found" });
 }
 
 export function createRealtimeServer(
@@ -111,7 +162,13 @@ export function createRealtimeServer(
     },
   });
   httpServer.on("request", (request, response) => {
-    publishHttpEvent(request, response, io, config.jwtSecret);
+    handleHttpRequest(
+      request,
+      response,
+      io,
+      config.jwtSecret,
+      config.redisStatus ?? ((): "connected" | "disconnected" | "disabled" => "disabled"),
+    );
   });
 
   io.use(async (socket, next) => {
@@ -195,15 +252,19 @@ export async function startServer(env: NodeJS.ProcessEnv = process.env): Promise
   const port = parsePort(env.SOCKET_IO_PORT);
   const host = env.HOST || "0.0.0.0";
   const httpServer = createServer();
+  let redisPublisher: ReturnType<typeof createClient> | undefined;
+  let redisSubscriber: ReturnType<typeof createClient> | undefined;
   const io = createRealtimeServer(httpServer, {
     jwtSecret,
     jwtIssuer: env.REALTIME_JWT_ISSUER,
     jwtAudience: env.REALTIME_JWT_AUDIENCE,
     corsOrigins: parseCorsOrigins(env.REALTIME_CORS_ORIGINS),
+    redisStatus: () => {
+      if (!env.REDIS_URL) return "disabled";
+      return redisPublisher?.isOpen ? "connected" : "disconnected";
+    },
   });
 
-  let redisPublisher: ReturnType<typeof createClient> | undefined;
-  let redisSubscriber: ReturnType<typeof createClient> | undefined;
   try {
     if (env.REDIS_URL) {
       redisPublisher = createClient({ url: env.REDIS_URL });

@@ -1,0 +1,8 @@
+# Arquivos sem parser nativo no Prettier — evitam o erro
+# "No parser could be inferred" no `pnpm format:check`.
+**/Dockerfile
+**/.gitkeep
+**/.gitignore
+**/*.sql
+**/*.prisma
+**/*.toml

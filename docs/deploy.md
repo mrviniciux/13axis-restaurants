@@ -1,10 +1,11 @@
 # Estratégia de deploy — Mudra for Restaurants
 
-**Status:** proposta operacional para o MVP. A automação de deploy ainda não
-está implementada no repositório; este documento define o alvo e os
-pré-requisitos para colocá-la em prática.
+**Status:** proposta operacional para o MVP. Os Dockerfiles de produção
+(`apps/web`, `apps/realtime`, `packages/database`), o `compose.yaml` e os
+health checks estão versionados; a automação de deploy na CI ainda não está
+implementada.
 
-**Última revisão:** 04/11/2026
+**Última revisão:** 06/11/2026
 
 **Base:** `specification.md` (§§ 12–13), `README.md`,
 `docs/architecture/realtime-contracts.md`, `apps/realtime/README.md` e o
@@ -13,18 +14,22 @@ workflow atual em `.github/workflows/ci.yml`.
 ## 1. Resumo da decisão
 
 A recomendação é hospedar o back-office e o serviço de tempo real como dois
-processos Node.js de longa duração no **Railway**, com **PostgreSQL gerenciado**
-e **Redis opcional**. O app Android é distribuído separadamente pelo **Expo EAS**.
+processos Node.js independentes em containers Docker em um servidor **Hetzner**
+único, publicados pelo **Coolify**, com **PostgreSQL 16 em container** no
+mesmo servidor e **Redis opcional**. O Railway permanece como alternativa PaaS
+sem operação de servidor (seção 5.4). O app Android é distribuído separadamente
+pelo **Expo EAS**.
 
 | Componente                 | Decisão                                                            | Observação                                                        |
 | -------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------------------- |
-| Web (`apps/web`)           | Next.js 16 em processo Node.js                                     | Serve UI, API Routes e Auth.js; não usar export estático          |
-| Realtime (`apps/realtime`) | Serviço Socket.IO independente                                     | WebSocket/WSS público e endpoint interno de publicação            |
-| Banco                      | PostgreSQL 16 gerenciado                                           | Fonte de verdade; acesso privado                                  |
+| Web (`apps/web`)           | Next.js 16 (`output: "standalone"`) em container próprio           | Serve UI, API Routes e Auth.js; não usar export estático          |
+| Realtime (`apps/realtime`) | Container Socket.IO independente                                    | WebSocket/WSS público e endpoint interno de publicação            |
+| Banco                      | PostgreSQL 16 em container no servidor                             | Volume persistente; backup automático Hetzner                     |
+| Publicação                 | Coolify self-hosted (grátis)                                        | git push → build Docker, proxy com TLS e health checks            |
 | Redis                      | Opcional no MVP, obrigatório para múltiplas instâncias do realtime | Quando `REDIS_URL` é definido, o realtime não inicia sem Redis    |
 | Mobile (`apps/mobile`)     | Expo EAS Build                                                     | APK interno no piloto; AAB/Play Store depois                      |
-| CI                         | GitHub Actions                                                     | Já executa lint, typecheck, testes e build; falta o job de deploy |
-| Observabilidade            | Logs do provedor; Sentry previsto                                  | Sentry ainda não está integrado ao código                         |
+| CI                         | GitHub Actions                                                     | Já executa lint, typecheck, testes e build; deploy via Coolify    |
+| Observabilidade            | Logs do servidor; Sentry previsto                                  | Sentry ainda não está integrado ao código                         |
 
 O modelo atual é **uma instalação por restaurante**: o CLI `create-admin` cria
 um restaurante e seu primeiro `ADMIN` e recusa a operação se já existir
@@ -32,35 +37,39 @@ restaurante no banco. Não há um plano de controle multi-tenant; cada restauran
 deve ter seu próprio projeto/banco.
 
 > A especificação cita Railway como opção recomendada e Hetzner + Coolify como
-> alternativa de custo. A estratégia detalhada abaixo usa Railway. A alternativa
-> exige que o repositório passe a ter Dockerfiles e operação de servidor própria.
+> alternativa de custo. Esta estratégia usa **Hetzner + Coolify como prioridade**
+> (ver `orcamento-whatsapp.md` e `pesquisa-opcoes-baratas.md`); o Railway está
+> descrito como alternativa na seção 5.4.
 
 ## 2. Arquitetura alvo
 
 ```text
-                         Internet / HTTPS
+                         Internet / HTTPS (Coolify / Traefik)
                                 │
           ┌─────────────────────┼──────────────────────┐
           │                     │                      │
    app.exemplo.com      realtime.exemplo.com     App Android
-   Next.js (web)        Socket.IO (realtime)     (EAS / HTTPS/WSS)
+   container: web        container: realtime     (EAS / HTTPS/WSS)
+   Next.js (16)          Socket.IO
           │                     │
-          │  HTTP privado       │
+          │  rede interna       │
           └── /internal/events ─┘
           │                     │
           │ Prisma              └── Redis (opcional,
           ▼                          apenas com múltiplas
-   PostgreSQL gerenciado            instâncias)
+   PostgreSQL (container)           instâncias)
 ```
 
 Fluxos importantes:
 
 - O navegador e o Android falam com o web por HTTPS. O Socket.IO usa WSS e um
   JWT curto obtido em `GET /api/realtime-token`.
-- O web publica eventos no realtime pela URL interna, usando o endpoint
-  `POST /internal/events`; esse endpoint não é uma API pública de negócio.
-- O PostgreSQL é acessado somente pelo web e pelos comandos de migração. O
-  realtime não precisa de banco no estado atual.
+- O web publica eventos no realtime pela URL interna da rede Docker
+  (`REALTIME_INTERNAL_URL`, por exemplo `http://realtime:3001`), usando o
+  endpoint `POST /internal/events`; esse endpoint não é uma API pública de
+  negócio.
+- O PostgreSQL é acessado somente pelo web e pelo serviço pontual de
+  migração. O realtime não precisa de banco no estado atual.
 - O Redis é usado apenas como adapter de fan-out do Socket.IO. Ele não é fila
   durável e não substitui o banco nem a reconciliação por API.
 
@@ -69,8 +78,8 @@ Fluxos importantes:
 | Ambiente       | Uso                     | Banco e Redis                                      | Regras                                                                                    |
 | -------------- | ----------------------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | Local          | Desenvolvimento         | PostgreSQL do `compose.yaml`                       | Seeds de demonstração permitidos; nunca usar dados reais                                  |
-| Staging        | Validação de release    | Projeto e banco separados                          | Dados sintéticos ou cópia anonimizada; mesmos serviços e variáveis da produção            |
-| Produção       | Operação do restaurante | PostgreSQL gerenciado; Redis somente se necessário | Dados reais, acesso restrito, backup e aprovação de deploy                                |
+| Staging        | Validação de release    | Servidor ou banco separados                       | Dados sintéticos ou cópia anonimizada; mesmas variáveis da produção                       |
+| Produção       | Operação do restaurante | PostgreSQL em container com backup Hetzner; Redis somente se necessário | Dados reais, acesso restrito, backup e aprovação de deploy          |
 | Preview por PR | Opcional                | Banco efêmero isolado                              | Não usar segredos nem banco de produção; se não houver isolamento, limitar ao build da CI |
 
 Staging deve ser o mais próximo possível da produção: mesmas versões de Node,
@@ -82,17 +91,15 @@ ambientes.
 
 Estes itens são bloqueadores ou riscos altos no estado atual:
 
-1. **Health checks.** O web não possui `/api/health`; o realtime também não
-   responde a `GET /health`. O servidor HTTP do realtime só trata
-   `POST /internal/events` e deixa outras requisições sem resposta. Antes de
-   configurar health check HTTP, adicionar endpoints explícitos:
-   - `GET /api/health` no web: verificação leve, sem autenticação e sem expor
-     detalhes internos; pode incluir `SELECT 1` para readiness.
-   - `GET /health` no realtime: processo vivo e, se Redis estiver configurado,
-     estado da conexão.
-2. **Configuração de deploy.** Não há `Dockerfile`, `railway.json`, `eas.json`
-   nem job de deploy versionado. A configuração pode ficar no painel do
-   provedor, mas deve ser reproduzível e documentada.
+1. **Health checks.** Implementados: `GET /api/health` no web (responde
+   `{"status":"ok"}` sem autenticação e sem expor detalhes internos) e
+   `GET /health` no realtime (inclui o estado do Redis: `connected`,
+   `disconnected` ou `disabled`). Os healthchecks do `compose.yaml` e o
+   `HEALTHCHECK` das imagens já os utilizam.
+2. **Configuração de deploy.** Versionada no repositório:
+   `apps/web/Dockerfile` (Next.js standalone), `apps/realtime/Dockerfile`,
+   `packages/database/Dockerfile` (migrações/CLIs) e `compose.yaml`. Ainda
+   falta `eas.json` para o mobile.
 3. **Backup e restauração testados.** Não basta habilitar snapshot; é preciso
    executar um restore de teste em banco isolado.
 4. **Mobile operacional.** O app atual é demonstrativo, não possui configuração
@@ -123,7 +130,12 @@ pnpm install --frozen-lockfile --prod=false
 
 `DATABASE_URL` pode ser um valor de placeholder válido durante o build para
 permitir `prisma generate`; o valor real é necessário na migração e no runtime
-do web.
+do web. O build também precisa de um `AUTH_SECRET` de placeholder: o
+`generateStaticParams` pré-renderiza as páginas autenticadas e `auth()` lança
+erro sem o segredo (com ele presente, a leitura de cookies marca a rota como
+dinâmica e o prerender é abortado). Placeholders de build nunca são embutidos
+no bundle — só `NEXT_PUBLIC_*` e `NODE_ENV` são inlined — e os Dockerfiles e a
+CI já definem esses placeholders.
 
 ### 5.2 Comandos por serviço
 
@@ -142,29 +154,68 @@ O comando `pnpm build` da raiz usa Turborepo, mas também compila o export do
 mobile. Para os serviços de produção, prefira os comandos filtrados acima para
 evitar acoplar o deploy do web ao build mobile.
 
-### 5.3 Configuração no Railway
+Os Dockerfiles versionados executam exatamente esses comandos em imagens
+`node:22-slim`. `apps/web` e `apps/realtime` usam dois estágios — build
+(instalação com lockfile congelado + compilação) e runtime enxuto — e
+`packages/database` é de estágio único (migrações/CLIs). A imagem do web usa o
+`output: "standalone"` do Next.js (apenas os arquivos rastreados) e a do
+realtime copia o workspace `realtime + shared` com o `dist/` compilado.
 
-Criar um projeto com quatro serviços:
+### 5.3 Configuração no Hetzner com Coolify
 
-| Serviço    | Configuração                                                                                                    |
-| ---------- | --------------------------------------------------------------------------------------------------------------- |
-| `web`      | Build e start conforme a tabela; domínio público `app.exemplo.com`; health check `/api/health` (a implementar)  |
-| `realtime` | Build e start conforme a tabela; domínio público `realtime.exemplo.com`; health check `/health` (a implementar) |
-| `postgres` | Plugin PostgreSQL 16; rede privada; sem exposição pública                                                       |
-| `redis`    | Opcional; rede privada; somente se houver mais de uma instância do realtime ou necessidade de fan-out           |
+1. Criar servidor: **CX23** (2 vCPU / 4 GB / 40 GB, ~€ 6/mês); região
+   **US-Ashburn** para menor latência do Brasil. Firewall liberando apenas
+   SSH (22), HTTP (80) e HTTPS (443).
+2. Instalar o Coolify com o script oficial:
+   `curl -fsSL https://cdn.coollabs.io/coolify/install.sh | bash`
+3. Apontar o DNS de `app.exemplo.com` e `realtime.exemplo.com` para o
+   servidor; o Coolify emite e renova o TLS automaticamente.
+4. Criar um projeto com os serviços:
+
+   | Serviço    | Origem                                          | Configuração                                                                |
+   | ---------- | ----------------------------------------------- | --------------------------------------------------------------------------- |
+   | `postgres` | imagem `postgres:16`                            | volume persistente; **sem** porta exposta publicamente                     |
+   | `realtime` | build `apps/realtime/Dockerfile` (contexto raiz) | porta interna 3001; health check `GET /health`                             |
+   | `web`      | build `apps/web/Dockerfile` (contexto raiz)      | porta interna 3000; health check `GET /api/health`; build arg `NEXT_PUBLIC_REALTIME_URL` |
+   | `migrate`  | build `packages/database/Dockerfile`            | execução pontual (migrations/CLIs); nunca expor como serviço               |
+
+   Em vez de serviços avulsos, o Coolify também aceita apontar para o
+   `compose.yaml` do repositório (inclusive o perfil `migrate`).
+5. Cadastrar as variáveis da seção 6 no painel de cada serviço (Coolify
+   Secret Store), com valores únicos por ambiente.
+6. Manter `web` e `realtime` na mesma rede Docker: o web usa
+   `REALTIME_INTERNAL_URL=http://realtime:3001`; o navegador usa
+   `NEXT_PUBLIC_REALTIME_URL` com a URL pública (exige **rebuild** do web ao
+   mudar, pois é embutida no bundle).
+7. Habilitar o backup automático do Hetzner no volume do banco (≈ +20% do
+   preço do servidor; ver seção 7.4).
+8. Executar migrations e bootstrap uma única vez (seção 7.3), por exemplo
+   `docker compose --profile migrate run --rm migrate` no servidor.
+
+O Coolify faz o deploy por git push (ou webhook), roda os builds Docker,
+reinicia os containers e monitora os health checks. O realtime usa
+`SOCKET_IO_PORT` (3001) internamente; o proxy expõe 443/WSS na frente.
+
+### 5.4 Alternativa: Railway
+
+Se a operação de servidor não estiver disponível, o Railway mantém o mesmo
+modelo sem servidor:
+
+| Serviço    | Configuração                                                                                                   |
+| ---------- | -------------------------------------------------------------------------------------------------------------- |
+| `web`      | Build e start da tabela 5.2; domínio público `app.exemplo.com`; health check `/api/health`                     |
+| `realtime` | Build e start da tabela 5.2; domínio público `realtime.exemplo.com`; health check `/health`                    |
+| `postgres` | Plugin PostgreSQL 16; rede privada; sem exposição pública                                                      |
+| `redis`    | Opcional; rede privada; somente se houver mais de uma instância do realtime ou necessidade de fan-out          |
 
 O web deve usar a URL privada do realtime em `REALTIME_INTERNAL_URL`, por
 exemplo `http://realtime.railway.internal:3001`. O navegador usa
 `NEXT_PUBLIC_REALTIME_URL` com a URL pública `https://realtime.exemplo.com`.
-
-O realtime lê `SOCKET_IO_PORT`, não `PORT`. Configure `SOCKET_IO_PORT` com a
-porta que o provedor irá rotear ou ajuste o comando de start para derivá-la de
-`PORT`. Não presuma que o padrão 3001 está exposto.
-
-Se o provedor oferecer "watch paths", limite cada serviço aos caminhos que
-realmente o afetam: `apps/web/**`, `packages/shared/**`, `packages/database/**`
-e arquivos de lock/config para o web; `apps/realtime/**`, `packages/shared/**`
-e arquivos de lock/config para o realtime.
+O realtime lê `SOCKET_IO_PORT`, não `PORT`. Se o provedor oferecer "watch
+paths", limite cada serviço aos caminhos que o afetam: `apps/web/**`,
+`packages/shared/**`, `packages/database/**` e arquivos de lock/config para o
+web; `apps/realtime/**`, `packages/shared/**` e arquivos de lock/config para o
+realtime.
 
 ## 6. Variáveis de ambiente
 
@@ -180,7 +231,7 @@ provedor e mantenha conjuntos separados por ambiente.
 | `AUTH_URL`                 | Recomendada        | URL pública canônica, por exemplo `https://app.exemplo.com`          |
 | `AUTH_TRUST_HOST`          | Sim atrás de proxy | Definir `true` para o Auth.js confiar no host encaminhado pelo proxy |
 | `NEXT_PUBLIC_REALTIME_URL` | Sim                | URL pública do Socket.IO; é embutida no bundle no build              |
-| `REALTIME_INTERNAL_URL`    | Sim                | URL privada do realtime para publicação de eventos                   |
+| `REALTIME_INTERNAL_URL`    | Sim                | URL interna do realtime para publicação de eventos; no compose: `http://realtime:3001` |
 | `REALTIME_JWT_SECRET`      | Sim                | Mesmo valor usado pelo realtime; pelo menos 32 bytes UTF-8           |
 | `REALTIME_JWT_ISSUER`      | Opcional           | Se definido, precisa ser igual no web e no realtime                  |
 | `REALTIME_JWT_AUDIENCE`    | Opcional           | Se definido, precisa ser igual no web e no realtime                  |
@@ -276,11 +327,21 @@ janela.
 
 ### 7.3 Primeira instalação
 
-Em um banco vazio:
+Em um banco vazio, a partir de uma máquina com o repositório (desenvolvimento
+ou staging):
 
 ```bash
 pnpm --filter @mudra/database db:migrate:deploy
 pnpm --filter @mudra/database create-admin
+```
+
+Somente com Docker (servidor de produção), usar o serviço `migrate` do
+`compose.yaml` (perfil `migrate`; o `create-admin` precisa de TTY interativo,
+que o `docker compose run` fornece):
+
+```bash
+docker compose --profile migrate run --rm migrate
+docker compose --profile migrate run --rm migrate pnpm --filter @mudra/database create-admin
 ```
 
 O `create-admin` também compila o pacote `@mudra/database`. Execute-o com
@@ -297,6 +358,9 @@ descrito em `packages/database/README.md`.
 
 Baseline recomendado:
 
+- No Hetzner, habilitar o backup automático do volume do banco (≈ +20% do
+  preço do servidor; até 7 cópias diárias) e complementar com `pg_dump`
+  off-provider criptografado quando a retenção não bastar.
 - Snapshot diário do PostgreSQL e, se o provedor oferecer, recuperação point-in-time.
 - Backup manual antes de migrações de risco.
 - Retenção mínima de 30 dias para snapshots diários e cópia off-provider
@@ -459,23 +523,27 @@ O workflow `.github/workflows/ci.yml` roda em pull requests e pushes para
    build. Nenhum deploy.
 2. **Merge na `main`:** repetir as verificações e gerar os artefatos de web e
    realtime.
-3. **Staging:** aplicar migrações, fazer deploy do realtime e do web, executar
-   smoke tests e validar o fluxo de login, comandas, fechamento e pagamento.
+3. **Staging:** aplicar migrações (serviço `migrate`), disparar o deploy no
+   Coolify (realtime e web), executar smoke tests e validar o fluxo de login,
+   comandas, fechamento e pagamento.
 4. **Aprovação de produção:** usar GitHub Environments com revisores
    obrigatórios e segredos separados.
-5. **Produção:** confirmar backup, executar a migração uma única vez, fazer
-   deploy do realtime, depois do web e executar smoke tests.
+5. **Produção:** confirmar backup, executar a migração uma única vez
+   (serviço `migrate`), fazer deploy do realtime, depois do web e executar
+   smoke tests.
 6. **Mobile:** build EAS sob demanda ou por tag de release; não acoplar o deploy
    do backend a um build mobile.
 
-O deploy deve acontecer **somente depois da CI verde**. Se o provedor fizer
-auto-deploy no push, desabilitar ou configurar a espera pela CI; caso contrário
-um commit pode ir para produção antes de lint/testes/build.
+O deploy deve acontecer **somente depois da CI verde**. Com Coolify, habilitar
+o deploy por webhook disparado pela CI (ou fazer deploy manual pelo painel
+somente após a CI verde); no Railway, desabilitar o auto-deploy no push ou
+configurar a espera pela CI. Caso contrário um commit pode ir para produção
+antes de lint/testes/build.
 
-Para o banco privado, a migração pode ser executada:
+Para o banco, a migração pode ser executada:
 
-- por um comando de pré-deploy configurado apenas no serviço de web, ou
-- por um job/serviço dedicado de release no provedor, com acesso à rede privada.
+- pelo serviço `migrate` do `compose.yaml` (perfil `migrate`) no servidor, ou
+- por uma máquina autorada com acesso temporário ao banco (staging).
 
 Não expor o PostgreSQL publicamente apenas para a CI alcançá-lo. Se a CI
 precisar conectar, usar uma connection string direta com TLS, um environment
@@ -498,8 +566,9 @@ incompatíveis, usar expand/contract e manter uma janela de compatibilidade.
 
 ### 11.4 Rollback
 
-- **Web/realtime:** redeploy da versão anterior pelo provedor ou revert do
-  commit com novo pipeline. Manter o artefato/imagem anterior disponível.
+- **Web/realtime:** redeploy da versão anterior pelo Coolify (as imagens
+  anteriores ficam disponíveis) ou revert do commit com novo pipeline. Manter o
+  artefato/imagem anterior disponível.
 - **Banco:** preferir correção forward (nova migração) em vez de down. Restaurar
   snapshot somente em caso de corrupção/perda e após comunicar a perda de dados
   posterior ao backup.
@@ -512,9 +581,11 @@ incompatíveis, usar expand/contract e manter uma janela de compatibilidade.
 
 Antes do piloto, configurar:
 
-- **Health checks:** web em `/api/health` e realtime em `/health`, após
-  implementá-los. O health check não deve expor versão, credenciais ou detalhes
-  de banco.
+- **Health checks:** web em `/api/health` e realtime em `/health` (ambos já
+  implementados; o do realtime informa apenas o estado do Redis). Os
+  healthchecks do `compose.yaml` e o `HEALTHCHECK` das imagens já os usam;
+  configurar os mesmos pontos no Coolify. O health check não expõe versão,
+  credenciais ou detalhes de banco.
 - **Logs:** coletar stdout/stderr no provedor ou em um log drain. Os logs da
   aplicação já evitam imprimir URLs e credenciais, mas devem ser revisados para
   não incluir tokens, senhas ou payloads sensíveis.
@@ -525,8 +596,8 @@ Antes do piloto, configurar:
   reconexões do realtime, falhas de publicação interna, erros de Redis, uso de
   disco/conexões do PostgreSQL e falha de backup.
 - **Uptime:** monitorar os dois domínios públicos e o certificado TLS. Para o
-  realtime, usar o health check HTTP depois de implementado; não usar `GET /`
-  no estado atual, pois ele não responde.
+  realtime, usar `GET /health` (implementado); caminhos desconhecidos, incluindo
+  `GET /`, respondem 404 em vez de ficar pendurados.
 
 Metas iniciais sugeridas para o piloto (não contratuais):
 
@@ -557,21 +628,23 @@ Metas iniciais sugeridas para o piloto (não contratuais):
 
 ## 14. Runbook — primeiro deploy
 
-1. Criar projeto no Railway, com PostgreSQL 16 e, se necessário, Redis.
-2. Criar os serviços `web` e `realtime` e configurar build/start da seção 5.
-3. Configurar domínios HTTPS e apontar DNS.
+1. Criar servidor no Hetzner (CX23, região US-Ashburn) com firewall para
+   22/80/443.
+2. Instalar o Coolify (seção 5.3) e apontar o DNS dos domínios.
+3. Criar os serviços `postgres`, `realtime`, `web` e `migrate` a partir dos
+   Dockerfiles e do `compose.yaml`.
 4. Cadastrar todas as variáveis da seção 6 em cada serviço, com valores únicos
    por ambiente.
-5. Implementar e publicar os endpoints de health check antes de ativar os
-   checks do provedor.
-6. Confirmar que o backup automático está ativo.
-7. Executar `db:migrate:deploy` em um shell com `DATABASE_URL` de produção.
-8. Executar `create-admin` em um shell interativo confiável; guardar as
-   credenciais em local seguro.
-9. Fazer deploy do realtime e confirmar `GET /health` (após implementado) e uma
-   conexão Socket.IO autenticada.
-10. Fazer deploy do web e confirmar login, carregamento de mesas/comandas e
-    emissão de token de tempo real.
+5. Configurar os health checks (`/api/health` e `/health`) e confirmar resposta
+   200 antes de liberar tráfego.
+6. Habilitar o backup automático do Hetzner no volume do banco.
+7. Executar `db:migrate:deploy` pelo serviço `migrate` com `DATABASE_URL` de
+   produção.
+8. Executar `create-admin` pelo serviço `migrate` em shell interativo
+   confiável; guardar as credenciais em local seguro.
+9. Confirmar `GET /health` do realtime e uma conexão Socket.IO autenticada.
+10. Confirmar login no web, carregamento de mesas/comandas e emissão de token
+    de tempo real.
 11. Testar add item, fechamento de comanda e pagamento, observando a atualização
     em outra sessão do navegador.
 12. Executar build EAS interno somente quando o app mobile estiver integrado ao
@@ -583,7 +656,7 @@ Metas iniciais sugeridas para o piloto (não contratuais):
 2. Confirmar que staging foi atualizado e os smoke tests passaram.
 3. Gerar/validar backup antes da migração.
 4. Aprovar o environment de produção no GitHub.
-5. Aplicar a migração uma única vez.
+5. Aplicar a migração uma única vez (serviço `migrate` do compose).
 6. Deploy do realtime (se afetado).
 7. Deploy do web.
 8. Executar smoke tests: login, comandas, item, fechamento, pagamento e
@@ -605,15 +678,14 @@ Executar em staging e produção após cada release:
   quando aplicável.
 - Registrar pagamento com permissão adequada retorna sucesso e publica o evento.
 - `GET /api/realtime-token` retorna um token para usuário autenticado.
-- Health checks do web e do realtime respondem 200 (após implementação).
+- Health checks do web e do realtime respondem 200.
 - Nenhum segredo aparece nos logs do deploy.
 
 ## 17. Riscos e pendências
 
 | Risco/pendência                                           | Impacto                                                            | Mitigação                                                            |
 | --------------------------------------------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------- |
-| Sem health endpoints                                      | Provedor pode considerar deploy saudável ou falhar sem diagnóstico | Implementar antes de produção                                        |
-| Sem Dockerfile/config de deploy versionada                | Deploy dependente de configuração manual                           | Documentar no painel ou versionar configuração                       |
+| Sem job de deploy na CI                                   | Deploy depende de webhook/manual no Coolify                        | Habilitar webhook pós-CI verde; automatizar depois                  |
 | Mobile demonstrativo, sem sync/API                        | App não opera de verdade                                           | Manter distribuição interna até concluir integração                  |
 | Sem `eas.json`, `expo-updates` e `runtimeVersion`         | Sem build reproduzível nem OTA seguro                              | Configurar antes do primeiro build de piloto                         |
 | Realtime sem outbox/histórico                             | Eventos podem ser perdidos                                         | Reconciliação por refresh/polling; outbox no futuro                  |
@@ -635,3 +707,5 @@ Executar em staging e produção após cada release:
 - `apps/realtime/README.md` — requisitos de JWT, Redis, CORS e publicação de
   eventos.
 - `.github/workflows/ci.yml` — pipeline atual de integração contínua.
+- `compose.yaml` e Dockerfiles (`apps/web`, `apps/realtime`,
+  `packages/database`) — infraestrutura de containers versionada.

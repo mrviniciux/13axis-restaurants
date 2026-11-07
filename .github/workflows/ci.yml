@@ -22,6 +22,10 @@ jobs:
     env:
       # Non-secret placeholder for Prisma validation/generation; no database service is used.
       DATABASE_URL: 'postgresql://ci:ci@localhost:5432/ci?schema=public'
+      # Non-secret placeholder so `next build` can prerender the authenticated
+      # pages (generateStaticParams + auth()) up to the cookie read, which marks
+      # them dynamic. Never used at runtime.
+      AUTH_SECRET: 'ci-build-placeholder-not-used-at-runtime'
     steps:
       - name: Check out repository
         uses: actions/checkout@v4

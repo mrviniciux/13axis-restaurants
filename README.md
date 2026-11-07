@@ -12,6 +12,7 @@ para operação offline-first.
 - `packages/database`: schema Prisma, acesso PostgreSQL, migrations e CLIs
 - `packages/shared`: tipos, validações Zod e utilitários compartilhados
 - Banco local: PostgreSQL 16 em Docker Compose
+- Produção: containers Docker independentes de web e realtime (ver `docs/deploy.md`)
 
 ## Requisitos
 
@@ -183,6 +184,38 @@ Em desenvolvimento local, o navegador usa `http://localhost:3001` e a API
 publica eventos em `http://127.0.0.1:3001` por padrão. Configure também
 `REALTIME_CORS_ORIGINS=http://localhost:3000` para permitir o fallback de
 long-polling.
+
+### Stack completa em containers (produção local)
+
+Além do fluxo de desenvolvimento com `pnpm dev`, o `compose.yaml` também sobe
+os serviços de produção em containers independentes — `postgres`, `realtime`
+e `web` — construídos a partir dos Dockerfiles de `apps/realtime`,
+`apps/web` e `packages/database`:
+
+```powershell
+# Com o .env carregado e as migrations já aplicadas (fluxo acima):
+docker compose up -d --build
+
+# Conferir os health checks (web: /api/health, realtime: /health):
+docker compose ps
+```
+
+Notas:
+
+- Pare o `pnpm dev` antes: os containers publicam as mesmas portas 3000 e
+  3001.
+- O container `web` **não** executa migrations automaticamente; aplique-as
+  antes (fluxo acima) ou use o perfil `migrate`:
+
+  ```powershell
+  docker compose --profile migrate run --rm migrate
+  docker compose --profile migrate run --rm migrate pnpm --filter @mudra/database create-admin
+  ```
+
+- `NEXT_PUBLIC_REALTIME_URL` é embutida no bundle no build; ao mudá-la,
+  reconstrua com `docker compose build web`.
+- Os comandos do fluxo de desenvolvimento (`docker compose up -d --wait
+  postgres`) continuam subindo **apenas** o PostgreSQL.
 
 ## Estado atual dos módulos
 

@@ -3,7 +3,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "env": ["NEXT_PUBLIC_REALTIME_URL"],
+      "env": ["AUTH_SECRET", "DATABASE_URL", "NEXT_PUBLIC_REALTIME_URL"],
       "outputs": [".next/**", "dist/**", "build/**"]
     },
     "dev": {
@@ -22,7 +22,8 @@
       ]
     },
     "lint": {
-      "dependsOn": ["^lint"]
+      "dependsOn": ["^lint"],
+      "env": ["DATABASE_URL"]
     },
     "typecheck": {
       "dependsOn": ["^typecheck"]

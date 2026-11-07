@@ -1,0 +1,27 @@
+# Dependências e artefatos locais — instalados/compilados dentro da imagem
+**/node_modules
+**/.next
+**/dist
+**/coverage
+**/.turbo
+**/.expo
+**/*.tsbuildinfo
+
+# Segredos e ambiente local — nunca entram na imagem
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Git, CI e documentação
+.git
+.github
+.gitignore
+**/*.md
+
+# Imagens e compose são lidos pelo cliente Docker, não pelo contexto
+compose.yaml
+**/Dockerfile
+
+# Logs
+**/*.log

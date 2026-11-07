@@ -1,3 +1,13 @@
+# Stack completa: PostgreSQL + realtime (Socket.IO) + web (Next.js).
+#
+# Desenvolvimento local com hot reload continua sendo `pnpm dev` (apenas o
+# postgres sobe por padrão nos comandos do README que nomeiam o serviço).
+# Para subir tudo em containers de produção:
+#   docker compose up -d --build
+# Migrações/CLIs (sob demanda):
+#   docker compose --profile migrate run --rm migrate
+#   docker compose --profile migrate run --rm migrate pnpm --filter @mudra/database create-admin
+
 services:
   postgres:
     image: postgres:16
@@ -14,6 +24,88 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+    restart: unless-stopped
+
+  # Serviço de tempo real — processo Node.js independente (apps/realtime).
+  realtime:
+    build:
+      context: .
+      dockerfile: apps/realtime/Dockerfile
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      SOCKET_IO_PORT: "3001"
+      REALTIME_JWT_SECRET: ${REALTIME_JWT_SECRET:?Set REALTIME_JWT_SECRET in .env}
+      REALTIME_CORS_ORIGINS: ${REALTIME_CORS_ORIGINS:-http://localhost:3000}
+    ports:
+      - "127.0.0.1:3001:3001"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3001/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+
+  # Back-office — processo Node.js independente (apps/web).
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        # Embutida no bundle no build; alterar exige rebuild desta imagem.
+        NEXT_PUBLIC_REALTIME_URL: ${NEXT_PUBLIC_REALTIME_URL:-http://localhost:3001}
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+      DATABASE_URL: postgresql://mudra:${MUDRA_DB_PASSWORD:?Set MUDRA_DB_PASSWORD in .env}@postgres:5432/mudra?schema=public
+      AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env}
+      AUTH_URL: ${AUTH_URL:-http://localhost:3000}
+      AUTH_TRUST_HOST: "true"
+      NEXT_PUBLIC_REALTIME_URL: ${NEXT_PUBLIC_REALTIME_URL:-http://localhost:3001}
+      REALTIME_INTERNAL_URL: ${REALTIME_INTERNAL_URL:-http://realtime:3001}
+      REALTIME_JWT_SECRET: ${REALTIME_JWT_SECRET:?Set REALTIME_JWT_SECRET in .env}
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      realtime:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+
+  # Migrações e CLIs Prisma — sob demanda (perfil "migrate"), não sobe no
+  # `docker compose up` padrão.
+  migrate:
+    profiles: ["migrate"]
+    build:
+      context: .
+      dockerfile: packages/database/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://mudra:${MUDRA_DB_PASSWORD:?Set MUDRA_DB_PASSWORD in .env}@postgres:5432/mudra?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
 
 volumes:
   mudra-postgres:
