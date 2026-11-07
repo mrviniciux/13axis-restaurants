@@ -2,6 +2,7 @@ export { ComandaDetailPane } from './comanda-detail-pane';
 export { ComandaMap } from './comanda-map';
 export { ComandasPanel } from './comandas-panel';
 export { DetailAddProductForm } from './detail-add-product-form';
+export { LargeCardsView } from './large-cards-view';
 export { OrderBillingSection } from './order-billing-section';
 export { OrderCard } from './order-card';
 export { OrderItemView } from './order-item-view';

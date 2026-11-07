@@ -96,7 +96,7 @@ export function useOrdersTablesApi() {
       }
     }
 
-    async function openOrder(tableId?: string, comandaNumber?: number) {
+    async function openOrder(tableId?: string, comandaNumber?: number, customerName?: string, peopleCount?: number) {
       const state = store.getState();
       const actionKey = comandaNumber ? `comanda-${comandaNumber}` : (tableId ?? 'standalone');
       const current = state.tableActions[actionKey];
@@ -117,6 +117,8 @@ export function useOrdersTablesApi() {
             id,
             ...(tableId ? { tableId } : {}),
             ...(comandaNumber ? { comandaNumber } : {}),
+            ...(customerName?.trim() ? { customerName: customerName.trim() } : {}),
+            ...(peopleCount && peopleCount > 0 ? { peopleCount } : {}),
             deviceId: null,
           }),
         });
@@ -496,6 +498,56 @@ export function useOrdersTablesApi() {
       }
     }
 
+    async function saveOrderDetails(
+      orderId: string,
+      customerName: string | null,
+      peopleCount: number | null,
+      customerId: string | null = null,
+    ) {
+      const key = `order-details-${orderId}`;
+      store.getState().actions.setTableAction(key, {
+        id: createId(),
+        status: 'pending',
+        message: 'Salvando…',
+      });
+      try {
+        const response = await fetch(`/api/orders/${orderId}`, {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            customerId: customerId ?? null,
+            customerName: customerName?.trim() || null,
+            peopleCount: peopleCount ?? null,
+          }),
+        });
+        if (!response.ok) {
+          const problem = await response.json().catch(() => null);
+          store.getState().actions.setTableAction(key, {
+            id: createId(),
+            status: 'error',
+            message:
+              problem !== null && typeof problem === 'object' && 'detail' in problem &&
+              typeof problem.detail === 'string'
+                ? problem.detail
+                : 'Não foi possível salvar os dados da comanda.',
+          });
+          return;
+        }
+        store.getState().actions.setTableAction(key, {
+          id: createId(),
+          status: 'created',
+          message: 'Dados salvos.',
+        });
+        router.refresh();
+      } catch {
+        store.getState().actions.setTableAction(key, {
+          id: createId(),
+          status: 'error',
+          message: 'Falha de conexão ao salvar os dados da comanda.',
+        });
+      }
+    }
+
     return {
       saveViewPreference,
       saveComandaNumbers,
@@ -506,6 +558,7 @@ export function useOrdersTablesApi() {
       createProductFromOrder,
       saveItem,
       removeItem,
+      saveOrderDetails,
     };
   }, [router, store]);
 }

@@ -6,6 +6,9 @@ export type CreateOrderInput = Readonly<{
   id: string;
   comandaNumber: number | null;
   tableId: string | null;
+  customerId: string | null;
+  customerName: string | null;
+  peopleCount: number | null;
   deviceId: string | null;
   /** Accepted as client metadata for contract compatibility; never persisted. */
   createdAt?: string;
@@ -16,6 +19,9 @@ const CreateOrderSchema = z
     id: UuidV7Schema,
     comandaNumber: z.number().int().min(1).max(2_147_483_647).nullable().optional(),
     tableId: UuidV7Schema.nullable().optional(),
+    customerId: UuidV7Schema.nullable().optional(),
+    customerName: z.string().trim().max(200).nullable().optional(),
+    peopleCount: z.number().int().min(1).max(999).nullable().optional(),
     deviceId: z.string().nullable().optional(),
     createdAt: UtcTimestampSchema.optional(),
   })
@@ -53,6 +59,9 @@ export function parseCreateOrderInput(input: unknown): CreateOrderInput {
     id: data.id,
     comandaNumber: data.comandaNumber ?? null,
     tableId: data.tableId ?? null,
+    customerId: data.customerId ?? null,
+    customerName: data.customerName ?? null,
+    peopleCount: data.peopleCount ?? null,
     deviceId: data.deviceId ?? null,
     ...(data.createdAt === undefined ? {} : { createdAt: data.createdAt }),
   };
@@ -130,4 +139,30 @@ export function parseDeleteOrderItemInput(input: unknown): number {
     throw ApiProblemError.validation(toFieldErrors(parsed.error.issues));
   }
   return parsed.data.expectedVersion;
+}
+
+export type UpdateOrderDetailsInput = Readonly<{
+  customerId: string | null;
+  customerName: string | null;
+  peopleCount: number | null;
+}>;
+
+const UpdateOrderDetailsSchema = z
+  .object({
+    customerId: UuidV7Schema.nullable().optional(),
+    customerName: z.string().trim().max(200).nullable().optional(),
+    peopleCount: z.number().int().min(1).max(999).nullable().optional(),
+  })
+  .strict();
+
+export function parseUpdateOrderDetailsInput(input: unknown): UpdateOrderDetailsInput {
+  const parsed = UpdateOrderDetailsSchema.safeParse(input);
+  if (!parsed.success) {
+    throw ApiProblemError.validation(toFieldErrors(parsed.error.issues));
+  }
+  return {
+    customerId: parsed.data.customerId ?? null,
+    customerName: parsed.data.customerName ?? null,
+    peopleCount: parsed.data.peopleCount ?? null,
+  };
 }

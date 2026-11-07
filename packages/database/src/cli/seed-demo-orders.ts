@@ -22,6 +22,80 @@ function isUniqueConstraintError(error: unknown): boolean {
   );
 }
 
+/** Preset items to seed into demo orders. Each entry references a menu item by name. */
+interface DemoOrderPreset {
+  comandaNumber: number;
+  items: { menuItemName: string; quantity: string; notes?: string }[];
+}
+
+const demoOrderPresets: readonly DemoOrderPreset[] = [
+  {
+    comandaNumber: 20,
+    items: [
+      { menuItemName: "Buffet Livre", quantity: "2" },
+      { menuItemName: "Coca Cola 300ml", quantity: "2" },
+    ],
+  },
+  {
+    comandaNumber: 21,
+    items: [
+      { menuItemName: "Buffet por KG", quantity: "1", notes: "0,850 kg" },
+      { menuItemName: "Suco de Laranja", quantity: "1" },
+    ],
+  },
+  {
+    comandaNumber: 22,
+    items: [
+      { menuItemName: "Buffet Livre", quantity: "1" },
+      { menuItemName: "Cerveja IPA Única", quantity: "2" },
+    ],
+  },
+  {
+    comandaNumber: 23,
+    items: [
+      { menuItemName: "Buffet Livre", quantity: "3" },
+      { menuItemName: "Jarra de Suco Especial", quantity: "1" },
+      { menuItemName: "Coca Cola Zero 300ml", quantity: "1" },
+    ],
+  },
+  {
+    comandaNumber: 24,
+    items: [
+      { menuItemName: "Corona", quantity: "3" },
+      { menuItemName: "Tradicional", quantity: "2" },
+    ],
+  },
+  {
+    comandaNumber: 25,
+    items: [
+      { menuItemName: "Buffet Livre", quantity: "1" },
+      { menuItemName: "Brulé", quantity: "1" },
+    ],
+  },
+  {
+    comandaNumber: 26,
+    items: [],
+  },
+  {
+    comandaNumber: 27,
+    items: [],
+  },
+  {
+    comandaNumber: 28,
+    items: [
+      { menuItemName: "Duo", quantity: "2" },
+      { menuItemName: "Suco Especial", quantity: "1" },
+    ],
+  },
+  {
+    comandaNumber: 29,
+    items: [
+      { menuItemName: "Buffet por KG", quantity: "1", notes: "1,200 kg" },
+      { menuItemName: "Jarra de Laranja", quantity: "1" },
+    ],
+  },
+];
+
 async function main(): Promise<void> {
   let prisma: PrismaClient | undefined;
 
@@ -39,6 +113,13 @@ async function main(): Promise<void> {
     if (!restaurant) {
       throw new SetupError("Inicialize o restaurante e o administrador antes de criar comandas.");
     }
+
+    // Build a lookup of menu items by name so we can attach items to orders
+    const menuItems = await prisma.menuItem.findMany({
+      where: { restaurantId: restaurant.id, deletedAt: null, available: true },
+      select: { id: true, name: true, price: true },
+    });
+    const menuItemByName = new Map(menuItems.map((mi) => [mi.name, mi]));
 
     const createdNumbers = await prisma.$transaction(async (transaction) => {
       await transaction.$queryRaw`
@@ -67,16 +148,46 @@ async function main(): Promise<void> {
       );
 
       for (const comandaNumber of missingNumbers) {
-        await transaction.order.create({
+        const preset = demoOrderPresets.find((p) => p.comandaNumber === comandaNumber);
+        const orderItems = (preset?.items ?? []).flatMap((entry) => {
+          const mi = menuItemByName.get(entry.menuItemName);
+          if (!mi) return [];
+          return [{ ...entry, menuItemId: mi.id, unitPrice: mi.price }];
+        });
+
+        const total = orderItems
+          .reduce(
+            (sum, oi) => sum.add(new Prisma.Decimal(oi.quantity).mul(new Prisma.Decimal(oi.unitPrice.toString()))),
+            new Prisma.Decimal(0),
+          )
+          .toFixed(2);
+
+        const order = await transaction.order.create({
           data: {
             id: createId(),
             restaurantId: restaurant.id,
             comandaNumber,
             status: "OPEN",
-            total: "0.00",
+            total,
             version: 1,
           },
+          select: { id: true },
         });
+
+        for (const oi of orderItems) {
+          await transaction.orderItem.create({
+            data: {
+              id: createId(),
+              orderId: order.id,
+              menuItemId: oi.menuItemId,
+              quantity: oi.quantity,
+              unitPrice: oi.unitPrice,
+              notes: oi.notes ?? null,
+              status: null,
+              version: 1,
+            },
+          });
+        }
       }
 
       return missingNumbers;

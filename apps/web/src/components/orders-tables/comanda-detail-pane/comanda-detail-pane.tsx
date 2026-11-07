@@ -3,6 +3,7 @@
 import { formatTime, getOrderDisplayName } from '@/lib/format';
 import { DetailAddProductForm } from '../detail-add-product-form';
 import { OrderBillingSection } from '../order-billing-section';
+import { OrderCustomerSection } from '../order-customer-section';
 import { OrderItemView } from '../order-item-view';
 import { useOrdersTables, useOrdersTablesActions } from '@/store';
 import type { Order } from '@/lib/types';
@@ -31,7 +32,9 @@ export function ComandaDetailPane({
       <OpenComandaPane
         comandaNumber={pendingComandaNumber}
         onCancel={() => actions.clearPendingComanda()}
-        onOpen={() => void api.openOrder(undefined, pendingComandaNumber)}
+        onOpen={(customerName, peopleCount) =>
+          void api.openOrder(undefined, pendingComandaNumber, customerName, peopleCount)
+        }
       />
     );
   }
@@ -71,6 +74,7 @@ export function ComandaDetailPane({
             ))}
           </ul>
         )}
+        <OrderCustomerSection order={order} />
         <DetailAddProductForm canManageMenu={canManageMenu} order={order} />
         <OrderBillingSection
           canCloseOrders={canCloseOrders}
@@ -89,9 +93,14 @@ function OpenComandaPane({
 }: Readonly<{
   comandaNumber: number;
   onCancel: () => void;
-  onOpen: () => void;
+  onOpen: (customerName?: string, peopleCount?: number) => void;
 }>) {
   const action = useOrdersTables((state) => state.tableActions[`comanda-${comandaNumber}`]);
+  const { openOrderCustomerName, openOrderPeopleCount } = useOrdersTables((state) => ({
+    openOrderCustomerName: state.openOrderCustomerName,
+    openOrderPeopleCount: state.openOrderPeopleCount,
+  }));
+  const actions = useOrdersTablesActions();
 
   return (
     <aside
@@ -110,7 +119,10 @@ function OpenComandaPane({
           <button
             className="primary-button"
             disabled={action?.status === 'pending'}
-            onClick={onOpen}
+            onClick={() => onOpen(
+              openOrderCustomerName || undefined,
+              openOrderPeopleCount ? parseInt(openOrderPeopleCount, 10) || undefined : undefined,
+            )}
             type="button"
           >
             {action?.status === 'pending' ? 'Abrindo…' : 'Abrir comanda'}
@@ -119,6 +131,33 @@ function OpenComandaPane({
       </header>
       <div className="order-summary-content comanda-open-pane-content">
         <p>Abra a comanda para lançar produtos, registrar pagamento e acompanhar os totais.</p>
+        <div className="new-order-inputs">
+          <label className="new-order-input-label">
+            <span>Cliente</span>
+            <input
+              autoComplete="off"
+              disabled={action?.status === 'pending'}
+              maxLength={200}
+              onChange={(e) => actions.setOpenOrderCustomerName(e.target.value)}
+              placeholder="Nome (opcional)"
+              type="text"
+              value={openOrderCustomerName}
+            />
+          </label>
+          <label className="new-order-input-label new-order-people">
+            <span>Pessoas</span>
+            <input
+              disabled={action?.status === 'pending'}
+              inputMode="numeric"
+              max={999}
+              min={1}
+              onChange={(e) => actions.setOpenOrderPeopleCount(e.target.value)}
+              placeholder="—"
+              type="number"
+              value={openOrderPeopleCount}
+            />
+          </label>
+        </div>
         {action ? (
           <p
             className={

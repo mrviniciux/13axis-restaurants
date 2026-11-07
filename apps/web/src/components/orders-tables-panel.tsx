@@ -146,6 +146,7 @@ function OrdersTablesPanelContent({
                 canReceivePayments={canReceivePayments}
                 orders={initialOrders}
                 tableNumbers={tableNumbers}
+                tables={initialTables}
                 userId={userId}
                 view={view}
               />
@@ -156,6 +157,7 @@ function OrdersTablesPanelContent({
 
       <OrderSummaryDialog
         canCloseOrders={canCloseOrders}
+        canManageMenu={canManageMenu}
         canReceivePayments={canReceivePayments}
         order={dialogOrder}
         tableNumbers={tableNumbers}

@@ -25,6 +25,9 @@ export type Order = Readonly<{
   id: string;
   comandaNumber: number | null;
   tableId: string | null;
+  customerId: string | null;
+  customerName: string | null;
+  peopleCount: number | null;
   status: 'OPEN';
   total: string;
   createdAt: string;

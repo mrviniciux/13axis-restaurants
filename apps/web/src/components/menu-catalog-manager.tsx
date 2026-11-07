@@ -10,9 +10,19 @@ type MenuItem = Readonly<{
   price: string;
 }>;
 
+type BuffetItem = Readonly<{
+  id: string;
+  name: string;
+  description: string | null;
+}>;
+
 export function MenuCatalogManager({
   initialItems,
-}: Readonly<{ initialItems: readonly MenuItem[] }>) {
+  initialBuffetItems,
+}: Readonly<{
+  initialItems: readonly MenuItem[];
+  initialBuffetItems: readonly BuffetItem[];
+}>) {
   const router = useRouter();
   const [items, setItems] = useState(initialItems);
   const [name, setName] = useState('');
@@ -22,6 +32,15 @@ export function MenuCatalogManager({
     null,
   );
   const [saving, setSaving] = useState(false);
+
+  const [buffetItems, setBuffetItems] = useState(initialBuffetItems);
+  const [buffetName, setBuffetName] = useState('');
+  const [buffetDescription, setBuffetDescription] = useState('');
+  const [buffetStatus, setBuffetStatus] = useState<{
+    kind: 'error' | 'success';
+    message: string;
+  } | null>(null);
+  const [buffetSaving, setBuffetSaving] = useState(false);
 
   async function createProduct(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -78,6 +97,67 @@ export function MenuCatalogManager({
       setStatus({ kind: 'error', message: 'Falha de conexão ao cadastrar o produto.' });
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function createBuffetProduct(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (buffetSaving) return;
+    setBuffetSaving(true);
+    setBuffetStatus(null);
+    try {
+      const response = await fetch('/api/buffet-items', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          name: buffetName,
+          description: buffetDescription || undefined,
+        }),
+      });
+      const result: unknown = await response.json().catch(() => null);
+      if (!response.ok) {
+        const detail =
+          result !== null && typeof result === 'object' && 'detail' in result &&
+          typeof result.detail === 'string'
+            ? result.detail
+            : 'Não foi possível cadastrar o produto de buffet.';
+        setBuffetStatus({ kind: 'error', message: detail });
+        return;
+      }
+      if (
+        result === null ||
+        typeof result !== 'object' ||
+        !('id' in result) ||
+        typeof result.id !== 'string' ||
+        !('name' in result) ||
+        typeof result.name !== 'string'
+      ) {
+        setBuffetStatus({
+          kind: 'error',
+          message: 'A resposta do cadastro não pôde ser validada. Atualize a página.',
+        });
+        return;
+      }
+      const createdItem: BuffetItem = {
+        id: result.id,
+        name: result.name,
+        description:
+          'description' in result && typeof result.description === 'string'
+            ? result.description
+            : null,
+      };
+      setBuffetItems((current) => [...current, createdItem]);
+      setBuffetName('');
+      setBuffetDescription('');
+      setBuffetStatus({ kind: 'success', message: 'Produto de buffet cadastrado.' });
+      router.refresh();
+    } catch {
+      setBuffetStatus({
+        kind: 'error',
+        message: 'Falha de conexão ao cadastrar o produto de buffet.',
+      });
+    } finally {
+      setBuffetSaving(false);
     }
   }
 
@@ -157,6 +237,69 @@ export function MenuCatalogManager({
           )}
         </section>
       </div>
+
+      <section aria-labelledby="buffet-catalog-heading" className="menu-catalog">
+        <header className="page-heading">
+          <div>
+            <h2 id="buffet-catalog-heading">Produtos de Buffet</h2>
+            <p className="page-description">
+              Cadastre os pratos que compõem o buffet. A cozinha usa essa lista para receber
+              solicitações de reposição no KDS.
+            </p>
+          </div>
+        </header>
+
+        <div className="menu-catalog-grid">
+          <form className="menu-product-form" onSubmit={(event) => void createBuffetProduct(event)}>
+            <h2>Cadastrar produto de buffet</h2>
+            <label>
+              Produto
+              <input
+                autoComplete="off"
+                maxLength={120}
+                onChange={(event) => setBuffetName(event.target.value)}
+                required
+                value={buffetName}
+              />
+            </label>
+            <label>
+              Descrição (opcional)
+              <input
+                autoComplete="off"
+                maxLength={500}
+                onChange={(event) => setBuffetDescription(event.target.value)}
+                value={buffetDescription}
+              />
+            </label>
+            <button className="primary-button" disabled={buffetSaving} type="submit">
+              {buffetSaving ? 'Salvando…' : 'Cadastrar produto de buffet'}
+            </button>
+            {buffetStatus ? (
+              <p className={buffetStatus.kind === 'error' ? 'action-feedback action-error' : 'action-feedback'} role={buffetStatus.kind === 'error' ? 'alert' : 'status'}>
+                {buffetStatus.message}
+              </p>
+            ) : null}
+          </form>
+
+          <section aria-labelledby="buffet-products-heading" className="menu-products-list">
+            <h2 id="buffet-products-heading">Produtos de buffet ({buffetItems.length})</h2>
+            {buffetItems.length === 0 ? (
+              <p className="order-empty">Nenhum produto de buffet cadastrado.</p>
+            ) : (
+              <ul>
+                {buffetItems.map((item) => (
+                  <li key={item.id}>
+                    <span>
+                      <strong>{item.name}</strong>
+                      {item.description ? <small>{item.description}</small> : null}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+      </section>
     </section>
   );
 }

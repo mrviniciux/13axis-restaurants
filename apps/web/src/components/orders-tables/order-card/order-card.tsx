@@ -85,15 +85,15 @@ export function OrderCard({
   return (
     <li className="order-card" id={`order-card-${order.id}`}>
       <div className="order-card-heading">
-        <div>
-          <strong>{title}</strong>
-          <span>Aberta às {formatTime(order.createdAt)}</span>
+        <div className="order-card-title-wrap">
+          <strong className="order-card-title">{title}</strong>
+          <span className="order-card-time">· às {formatTime(order.createdAt)}</span>
         </div>
         <strong className="order-total">{formatMoney(order.total)}</strong>
       </div>
       <div aria-label="Produtos da comanda" className="order-recent-items">
         {order.items.length === 0 ? (
-          <p className="order-empty">Nenhum item lançado ainda.</p>
+          <p className="order-empty">Nenhum item lançado ainda</p>
         ) : (
           <>
             <ul className="order-item-list">
@@ -109,7 +109,8 @@ export function OrderCard({
                 title="Ver todos os itens da comanda"
                 type="button"
               >
-                <MoreHorizontal aria-hidden="true" size={18} />
+                <MoreHorizontal aria-hidden="true" size={14} />
+                <span>+{order.items.length - 3} mais</span>
               </button>
             ) : null}
           </>
@@ -126,7 +127,7 @@ export function OrderCard({
           {quickAddOpen ? 'Cancelar' : '+ Adicionar item'}
         </button>
         <button
-          className="text-button"
+          className="text-button order-card-view-btn"
           onClick={() => actions.showOrderDetails(order.id)}
           type="button"
         >

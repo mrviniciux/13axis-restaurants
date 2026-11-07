@@ -1,8 +1,11 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { formatMoney, getOrderDisplayName } from '@/lib/format';
+import { formatTime, getOrderDisplayName } from '@/lib/format';
+import { DetailAddProductForm } from '../detail-add-product-form';
 import { OrderBillingSection } from '../order-billing-section';
+import { OrderCustomerSection } from '../order-customer-section';
+import { OrderItemView } from '../order-item-view';
 import { useOrdersTablesActions } from '@/store';
 import type { Order } from '@/lib/types';
 
@@ -11,11 +14,13 @@ export function OrderSummaryDialog({
   tableNumbers,
   canReceivePayments,
   canCloseOrders,
+  canManageMenu = false,
 }: Readonly<{
   order: Order | null;
   tableNumbers: ReadonlyMap<string, number>;
   canReceivePayments: boolean;
   canCloseOrders: boolean;
+  canManageMenu?: boolean;
 }>) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const actions = useOrdersTablesActions();
@@ -26,6 +31,10 @@ export function OrderSummaryDialog({
     if (order && !dialog.open) dialog.showModal();
     if (!order && dialog.open) dialog.close();
   }, [order]);
+
+  const tableNumber = order?.tableId ? tableNumbers.get(order.tableId) : undefined;
+  const tableDescription = tableNumber !== undefined ? `Mesa ${tableNumber}` : '';
+  const orderName = order ? getOrderDisplayName(order, tableNumbers) : '';
 
   return (
     <dialog
@@ -38,39 +47,34 @@ export function OrderSummaryDialog({
         <>
           <header className="order-summary-heading">
             <div>
-              <h2 id="order-summary-title">{getOrderDisplayName(order, tableNumbers)}</h2>
-              <p>{order.items.length} produto(s)</p>
+              <h2 id="order-summary-title">{orderName}</h2>
+              <p>
+                {order.items.length} produto(s)
+                {tableDescription ? ` · ${tableDescription}` : ''}
+                {' · '}aberta às {formatTime(order.createdAt)}
+              </p>
             </div>
             <button
               aria-label="Fechar resumo da comanda"
-              className="secondary-button"
+              className="secondary-button compact-btn"
               onClick={() => dialogRef.current?.close()}
               type="button"
             >
               Fechar
             </button>
           </header>
-          <div className="order-summary-content">
+          <div className="order-summary-content comanda-detail-content">
             {order.items.length === 0 ? (
               <p className="order-empty">Nenhum produto lançado nesta comanda.</p>
             ) : (
-              <ul className="order-summary-items">
+              <ul className="order-summary-items comanda-detail-items">
                 {order.items.map((item) => (
-                  <li key={item.id}>
-                    <span>
-                      <strong>
-                        {item.quantity} × {item.name}
-                      </strong>
-                      <small>
-                        {formatMoney(item.unitPrice)} por unidade
-                        {item.notes ? ` · ${item.notes}` : ''}
-                      </small>
-                    </span>
-                    <strong>{formatMoney(item.lineTotal)}</strong>
-                  </li>
+                  <OrderItemView context="detail" item={item} key={item.id} orderId={order.id} />
                 ))}
               </ul>
             )}
+            <OrderCustomerSection order={order} />
+            <DetailAddProductForm canManageMenu={canManageMenu} order={order} />
             <OrderBillingSection
               canCloseOrders={canCloseOrders}
               canReceivePayments={canReceivePayments}

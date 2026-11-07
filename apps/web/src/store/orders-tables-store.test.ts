@@ -38,6 +38,9 @@ describe('orders tables store', () => {
     expect(store.getState().detailProductSearch).toBe('');
     expect(store.getState().closeConfirmOrderId).toBeNull();
     expect(store.getState().creatingProductFor).toBeNull();
+
+    store.getState().actions.setComandasTab('LARGE_CARDS');
+    expect(store.getState().comandasTab).toBe('LARGE_CARDS');
   });
 
   it('opens the detail form with the first product and resets it after an add', () => {

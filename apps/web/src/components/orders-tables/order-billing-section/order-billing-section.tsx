@@ -29,7 +29,7 @@ export function OrderBillingSection({
   }));
   const paymentAmount = paymentAmounts[order.id];
   const paymentMethod = paymentMethods[order.id] ?? 'dinheiro';
-  const paymentCollapsed = collapsedPaymentOrders[order.id] ?? false;
+  const paymentCollapsed = collapsedPaymentOrders[order.id] ?? true;
   const paymentAction = tableActions[`payment-${order.id}`];
   const closeAction = tableActions[`comanda-${order.id}`];
   const closeConfirming = closeConfirmOrderId === order.id;
@@ -177,28 +177,14 @@ export function OrderBillingSection({
 
 function OrderTotals({ order }: Readonly<{ order: Order }>) {
   return (
-    <>
-      <dl className="order-summary-totals">
-        <div>
-          <dt>Produtos</dt>
-          <dd>{formatMoney(order.total)}</dd>
-        </div>
-        <div>
-          <dt>Taxa de garçom</dt>
-          <dd>Não configurada</dd>
-        </div>
-        <div>
-          <dt>Desconto</dt>
-          <dd>Não configurado</dd>
-        </div>
-        <div className="order-summary-grand-total">
-          <dt>Total</dt>
-          <dd>{formatMoney(order.total)}</dd>
-        </div>
-      </dl>
-      <p className="order-summary-note">
-        Taxa de garçom e desconto ainda não são configurados nem aplicados ao total.
-      </p>
-    </>
+    <div className="order-summary-totals-compact">
+      <div className="order-summary-grand-total">
+        <span>
+          Total da comanda ({order.items.length}{' '}
+          {order.items.length === 1 ? 'item' : 'itens'})
+        </span>
+        <strong>{formatMoney(order.total)}</strong>
+      </div>
+    </div>
   );
 }

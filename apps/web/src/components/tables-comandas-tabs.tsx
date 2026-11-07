@@ -6,6 +6,7 @@ export const TABLES_COMANDAS_TABS = [
   { id: 'MAP_WITH_CARDS', label: 'Mapa + Cards' },
   { id: 'MAP_WITH_DETAILS', label: 'Mapa + detalhamento' },
   { id: 'CARDS', label: 'Cards' },
+  { id: 'LARGE_CARDS', label: 'Large cards' },
 ] as const;
 
 export type TablesComandasTab = (typeof TABLES_COMANDAS_TABS)[number]['id'];

@@ -12,31 +12,52 @@ function requiredEnvironmentVariable(name: "DATABASE_URL" | "NODE_ENV"): string 
   return value;
 }
 
-const demoMenu = [
+interface DemoMenuItem {
+  name: string;
+  price: string;
+  description?: string;
+}
+
+interface DemoMenuGroup {
+  category: string;
+  items: readonly DemoMenuItem[];
+}
+
+const demoMenu: readonly DemoMenuGroup[] = [
   {
-    category: "Lanches",
+    category: "Buffet",
     items: [
-      { name: "Hambúrguer clássico", price: "32.00" },
-      { name: "Sanduíche de frango", price: "28.00" },
-      { name: "Batata frita", price: "18.00" },
+      { name: "Buffet Livre", price: "64.90" },
+      { name: "Buffet por KG", price: "94.90", description: "Preço por quilograma" },
     ],
   },
   {
-    category: "Bebidas",
+    category: "Refrigerantes",
     items: [
-      { name: "Refrigerante lata", price: "7.00" },
-      { name: "Água mineral", price: "5.00" },
-      { name: "Suco natural", price: "12.00" },
+      { name: "Coca Cola 300ml", price: "6.00" },
+      { name: "Coca Cola Zero 300ml", price: "6.00" },
     ],
   },
   {
-    category: "Sobremesas",
+    category: "Sucos",
     items: [
-      { name: "Pudim", price: "14.00" },
-      { name: "Brownie", price: "16.00" },
+      { name: "Suco de Laranja", price: "13.00" },
+      { name: "Suco Especial", price: "15.00" },
+      { name: "Jarra de Suco Especial", price: "28.00" },
+      { name: "Jarra de Laranja", price: "24.00" },
     ],
   },
-] as const;
+  {
+    category: "Cervejas",
+    items: [
+      { name: "Cerveja IPA Única", price: "18.00" },
+      { name: "Corona", price: "16.00" },
+      { name: "Tradicional", price: "12.00" },
+      { name: "Duo", price: "14.00" },
+      { name: "Brulé", price: "15.00" },
+    ],
+  },
+];
 
 async function main(): Promise<void> {
   let prisma: PrismaClient | undefined;
@@ -88,6 +109,7 @@ async function main(): Promise<void> {
               categoryId: category.id,
               name: item.name,
               price: item.price,
+              description: item.description ?? null,
               available: true,
             },
           });
@@ -95,8 +117,9 @@ async function main(): Promise<void> {
       }
     });
 
+    const totalItems = demoMenu.reduce((count, group) => count + group.items.length, 0);
     stdout.write(
-      `Cardápio de demonstração criado: ${demoMenu.length} categorias e ${demoMenu.reduce((count, group) => count + group.items.length, 0)} produtos.\n`,
+      `Cardápio de demonstração criado: ${demoMenu.length} categorias e ${totalItems} produtos.\n`,
     );
   } catch (error) {
     if (error instanceof SetupError) {

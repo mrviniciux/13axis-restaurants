@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
 }
 
 enum Role {
@@ -59,6 +60,8 @@ model Restaurant {
   menuCategories MenuCategory[]
   menuItems      MenuItem[]
   orders         Order[]
+  buffetItems    BuffetItem[]
+  customers      Customer[]
 
   @@index([deletedAt])
 }
@@ -156,6 +159,9 @@ model Order {
   restaurantId  String      @db.Uuid
   comandaNumber Int?
   tableId       String?     @db.Uuid
+  customerId    String?     @db.Uuid
+  customerName  String?
+  peopleCount   Int?
   waiterId      String?     @db.Uuid
   status        OrderStatus @default(OPEN)
   total         Decimal     @default(0) @db.Decimal(12, 2)
@@ -167,13 +173,15 @@ model Order {
   deviceId      String?
   deletedAt     DateTime?   @db.Timestamptz(3)
 
-  restaurant Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  table      Table?      @relation(fields: [tableId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  waiter     User?       @relation(fields: [waiterId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  items      OrderItem[]
+  restaurant   Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  table        Table?      @relation(fields: [tableId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  waiter       User?       @relation(fields: [waiterId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  customer     Customer?   @relation(fields: [customerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  items        OrderItem[]
 
   @@index([restaurantId, status, deletedAt])
   @@index([tableId, status])
+  @@index([customerId])
 }
 
 model OrderItem {
@@ -197,4 +205,43 @@ model OrderItem {
 
   @@index([orderId, deletedAt])
   @@index([menuItemId])
+}
+
+model BuffetItem {
+  id           String    @id @db.Uuid
+  restaurantId String    @db.Uuid
+  name         String
+  description  String?
+  available    Boolean   @default(true)
+  createdAt    DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime  @updatedAt @db.Timestamptz(3)
+  version      Int       @default(1)
+  lastSyncedAt DateTime? @db.Timestamptz(3)
+  deviceId     String?
+  deletedAt    DateTime? @db.Timestamptz(3)
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([restaurantId, deletedAt])
+}
+
+model Customer {
+  id           String    @id @db.Uuid
+  restaurantId String    @db.Uuid
+  name         String
+  phone        String?
+  email        String?
+  notes        String?
+  createdAt    DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime  @updatedAt @db.Timestamptz(3)
+  version      Int       @default(1)
+  lastSyncedAt DateTime? @db.Timestamptz(3)
+  deviceId     String?
+  deletedAt    DateTime? @db.Timestamptz(3)
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  orders     Order[]
+
+  @@index([restaurantId, deletedAt])
+  @@index([restaurantId, name])
 }

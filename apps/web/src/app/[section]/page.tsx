@@ -8,7 +8,7 @@ import { MenuCatalogManager } from '@/components/menu-catalog-manager';
 import { KitchenDemo } from '@/components/kitchen-demo';
 import { getAuthenticatedServerContext } from '@/lib/server/auth';
 import { sectionDetails, type AppSection } from '@/lib/navigation';
-import { listMenuItems, listOrders, listTables } from '@/lib/server/operations';
+import { listBuffetItems, listMenuItems, listOrders, listTables } from '@/lib/server/operations';
 import { getTablesComandasViewPreference } from '@/lib/server/user-preferences';
 import { getRestaurantComandaNumbers } from '@/lib/server/comanda-number-settings';
 import type { TablesComandasView } from '@/lib/server/tables-comandas-view';
@@ -46,6 +46,7 @@ export default async function PlaceholderPage({ params }: SectionPageProps) {
   let tablesComandasView: TablesComandasView = 'COMANDA';
   let comandaNumbers = '{20-110}';
   let menuItems: Awaited<ReturnType<typeof listMenuItems>> = [];
+  let buffetItems: Awaited<ReturnType<typeof listBuffetItems>> = [];
   let canManageMenu = false;
 
   let liveData: {
@@ -67,8 +68,6 @@ export default async function PlaceholderPage({ params }: SectionPageProps) {
 
       if (viewPreference === 'MESA') {
         tables = await listTables(context, { includeOpenOrders: false });
-      } else if (viewPreference === 'COMANDA') {
-        [orders, menuItems] = await Promise.all([listOrders(context), listMenuItems(context)]);
       } else {
         [tables, orders, menuItems] = await Promise.all([
           listTables(context),
@@ -86,7 +85,12 @@ export default async function PlaceholderPage({ params }: SectionPageProps) {
     try {
       const context = await getAuthenticatedServerContext();
       canManageMenu = context.role === 'ADMIN';
-      if (canManageMenu) menuItems = await listMenuItems(context);
+      if (canManageMenu) {
+        [menuItems, buffetItems] = await Promise.all([
+          listMenuItems(context),
+          listBuffetItems(context),
+        ]);
+      }
     } catch (error) {
       logOperationalDataLoadFailure('menu-catalog', error);
     }
@@ -124,7 +128,7 @@ export default async function PlaceholderPage({ params }: SectionPageProps) {
       ) : isKitchen ? (
         <KitchenDemo />
       ) : isMenu && canManageMenu ? (
-        <MenuCatalogManager initialItems={menuItems} />
+        <MenuCatalogManager initialItems={menuItems} initialBuffetItems={buffetItems} />
       ) : isMenu ? (
         <section aria-labelledby="menu-access-heading" className="placeholder-card">
           <h1 id="menu-access-heading">Cardápio</h1>

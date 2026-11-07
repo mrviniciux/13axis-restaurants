@@ -39,6 +39,8 @@ type OrdersTablesState = Readonly<{
   newProductCategory: string;
   newProductPrice: string;
   productCreateAction: ActionState | null;
+  openOrderCustomerName: string;
+  openOrderPeopleCount: string;
   detailAddOpen: boolean;
   detailProductId: string;
   detailProductSearch: string;
@@ -68,6 +70,8 @@ type OrdersTablesActions = Readonly<{
   setComandaPage: (page: number) => void;
   requestOpenComanda: (comandaNumber: number) => void;
   clearPendingComanda: () => void;
+  setOpenOrderCustomerName: (value: string) => void;
+  setOpenOrderPeopleCount: (value: string) => void;
   selectComandaOrder: (orderId: string) => void;
   showOrderDetails: (orderId: string) => void;
   hideOrderDetails: () => void;
@@ -131,7 +135,22 @@ function withoutKey<TValue>(record: Readonly<Record<string, TValue>>, key: strin
 export function createOrdersTablesStore(initial: OrdersTablesStoreInitial) {
   return createStore<OrdersTablesStore>()((set, get) => ({
     view: initial.view,
-    comandasTab: 'MAP_WITH_CARDS',
+    comandasTab: (() => {
+      if (typeof window !== 'undefined') {
+        try {
+          const saved = window.localStorage.getItem('mudra_comandas_tab');
+          if (
+            saved === 'MAP_WITH_CARDS' ||
+            saved === 'MAP_WITH_DETAILS' ||
+            saved === 'CARDS' ||
+            saved === 'LARGE_CARDS'
+          ) {
+            return saved;
+          }
+        } catch {}
+      }
+      return 'MAP_WITH_CARDS';
+    })(),
     propertiesOpen: false,
     preferenceStatus: 'idle',
     comandaNumbers: initial.comandaNumbers,
@@ -154,6 +173,8 @@ export function createOrdersTablesStore(initial: OrdersTablesStoreInitial) {
     newProductCategory: '',
     newProductPrice: '',
     productCreateAction: null,
+    openOrderCustomerName: '',
+    openOrderPeopleCount: '',
     detailAddOpen: false,
     detailProductId: '',
     detailProductSearch: '',
@@ -172,10 +193,17 @@ export function createOrdersTablesStore(initial: OrdersTablesStoreInitial) {
     realtimeStatus: 'connecting',
     actions: {
       setView: (view) => set({ view }),
-      setComandasTab: (comandasTab) =>
-        set({
+      setComandasTab: (comandasTab) => {
+        if (typeof window !== 'undefined') {
+          try {
+            window.localStorage.setItem('mudra_comandas_tab', comandasTab);
+          } catch {}
+        }
+        return set({
           comandasTab,
           pendingComandaNumber: null,
+          openOrderCustomerName: '',
+          openOrderPeopleCount: '',
           detailAddOpen: false,
           detailProductSearch: '',
           detailProductDropdownOpen: false,
@@ -184,7 +212,8 @@ export function createOrdersTablesStore(initial: OrdersTablesStoreInitial) {
           newProductCategory: '',
           newProductPrice: '',
           productCreateAction: null,
-        }),
+        });
+      },
       toggleProperties: () => set((state) => ({ propertiesOpen: !state.propertiesOpen })),
       setPreferenceStatus: (preferenceStatus) => set({ preferenceStatus }),
       setComandaNumbers: (comandaNumbers) => set({ comandaNumbers }),
@@ -203,7 +232,9 @@ export function createOrdersTablesStore(initial: OrdersTablesStoreInitial) {
           newProductPrice: '',
           productCreateAction: null,
         }),
-      clearPendingComanda: () => set({ pendingComandaNumber: null }),
+      clearPendingComanda: () => set({ pendingComandaNumber: null, openOrderCustomerName: '', openOrderPeopleCount: '' }),
+      setOpenOrderCustomerName: (openOrderCustomerName) => set({ openOrderCustomerName }),
+      setOpenOrderPeopleCount: (openOrderPeopleCount) => set({ openOrderPeopleCount }),
       selectComandaOrder: (selectedComandaOrderId) =>
         set({
           selectedComandaOrderId,

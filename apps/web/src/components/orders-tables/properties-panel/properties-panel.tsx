@@ -25,7 +25,7 @@ export function PropertiesPanel({ userId }: Readonly<{ userId: string }>) {
       <legend>Propriedades da visualização</legend>
       <p>
         Escolha como mesas e comandas devem aparecer para sua conta. Nas visões com comandas, use as
-        abas para alternar entre mapa, cards e detalhamento.
+        abas para alternar entre mapa, cards, detalhamento e large cards.
       </p>
       <div className="view-preference-options">
         <ViewPreferenceOption

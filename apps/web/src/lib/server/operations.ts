@@ -13,9 +13,12 @@ import {
   parseAddOrderItemInput,
   parseCreateOrderInput,
   parseDeleteOrderItemInput,
+  parseUpdateOrderDetailsInput,
   parseUpdateOrderItemInput,
 } from './order-input';
 import { parseCreateMenuItemInput } from './menu-item-input';
+import { parseCreateBuffetItemInput } from './buffet-item-input';
+import { parseCreateCustomerInput } from './customer-input';
 import { prisma } from './prisma';
 import { includesComandaNumber, parseComandaNumbers } from '../comanda-numbers';
 
@@ -36,6 +39,9 @@ const orderWithItemsSelect = {
   id: true,
   comandaNumber: true,
   tableId: true,
+  customerId: true,
+  customerName: true,
+  peopleCount: true,
   waiterId: true,
   status: true,
   total: true,
@@ -55,6 +61,9 @@ export type OpenOrderSummary = Readonly<{
   id: string;
   comandaNumber: number | null;
   tableId: string | null;
+  customerId: string | null;
+  customerName: string | null;
+  peopleCount: number | null;
   waiterId: string | null;
   status: 'OPEN';
   total: string;
@@ -79,6 +88,12 @@ export type MenuItemSummary = Readonly<{
   name: string;
   category: string;
   price: string;
+}>;
+
+export type BuffetItemSummary = Readonly<{
+  id: string;
+  name: string;
+  description: string | null;
 }>;
 
 export type TableSummary = Readonly<{
@@ -126,6 +141,9 @@ function toOpenOrderSummary(order: {
   id: string;
   comandaNumber: number | null;
   tableId: string | null;
+  customerId?: string | null;
+  customerName?: string | null;
+  peopleCount?: number | null;
   waiterId: string | null;
   total: Prisma.Decimal;
   createdAt: Date;
@@ -137,6 +155,9 @@ function toOpenOrderSummary(order: {
     id: order.id,
     comandaNumber: order.comandaNumber,
     tableId: order.tableId,
+    customerId: order.customerId ?? null,
+    customerName: order.customerName ?? null,
+    peopleCount: order.peopleCount ?? null,
     waiterId: order.waiterId,
     status: 'OPEN',
     total: order.total.toFixed(2),
@@ -158,6 +179,18 @@ function toMenuItemSummary(item: {
     name: item.name,
     category: item.category.name,
     price: item.price.toFixed(2),
+  };
+}
+
+function toBuffetItemSummary(item: {
+  id: string;
+  name: string;
+  description: string | null;
+}): BuffetItemSummary {
+  return {
+    id: item.id,
+    name: item.name,
+    description: item.description,
   };
 }
 
@@ -388,6 +421,83 @@ export async function createMenuItem(
   });
 }
 
+export async function listBuffetItems(
+  context: unknown,
+  client: PrismaClient = prisma,
+): Promise<readonly BuffetItemSummary[]> {
+  const principal = requireOperationalReadAccess(context);
+  return client.$transaction(async (tx) => {
+    await assertCurrentPrincipal(tx, principal);
+    const items = await tx.buffetItem.findMany({
+      where: {
+        restaurantId: principal.restaurantId,
+        available: true,
+        deletedAt: null,
+      },
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      select: {
+        id: true,
+        name: true,
+        description: true,
+      },
+    });
+    return items.map(toBuffetItemSummary);
+  });
+}
+
+export async function createBuffetItem(
+  context: unknown,
+  body: unknown,
+  client: PrismaClient = prisma,
+): Promise<BuffetItemSummary> {
+  const principal = requirePermission(context, 'MENU_MANAGE');
+  if (principal.role !== 'ADMIN') {
+    throw new ApiProblemError(
+      403,
+      'FORBIDDEN',
+      'Acesso negado',
+      'Somente um administrador pode cadastrar produtos de buffet.',
+    );
+  }
+  const input = parseCreateBuffetItemInput(body);
+
+  return client.$transaction(async (tx) => {
+    await assertCurrentPrincipal(tx, principal);
+    const duplicate = await tx.buffetItem.findFirst({
+      where: {
+        restaurantId: principal.restaurantId,
+        deletedAt: null,
+        name: { equals: input.name, mode: 'insensitive' },
+      },
+      select: { id: true },
+    });
+    if (duplicate) {
+      throw new ApiProblemError(
+        409,
+        'BUFFET_ITEM_ALREADY_EXISTS',
+        'Produto já cadastrado',
+        'Já existe um produto de buffet ativo com esse nome.',
+      );
+    }
+
+    const item = await tx.buffetItem.create({
+      data: {
+        id: createId(),
+        restaurantId: principal.restaurantId,
+        name: input.name,
+        description: input.description,
+        available: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+      },
+    });
+    return toBuffetItemSummary(item);
+  });
+}
+
 export async function listOrders(
   context: unknown,
   options: Readonly<{ tableId?: string }> = {},
@@ -424,6 +534,9 @@ function orderMatchesCreate(
     restaurantId: string;
     comandaNumber: number | null;
     tableId: string | null;
+    customerId: string | null;
+    customerName: string | null;
+    peopleCount: number | null;
     deviceId: string | null;
     deletedAt: Date | null;
     status: string;
@@ -435,6 +548,9 @@ function orderMatchesCreate(
     order.restaurantId === restaurantId &&
     order.comandaNumber === input.comandaNumber &&
     order.tableId === input.tableId &&
+    order.customerId === input.customerId &&
+    order.customerName === input.customerName &&
+    order.peopleCount === input.peopleCount &&
     order.deviceId === input.deviceId &&
     order.deletedAt === null &&
     order.status === 'OPEN'
@@ -460,6 +576,9 @@ export async function createOpenOrder(
             restaurantId: true,
             comandaNumber: true,
             tableId: true,
+            customerId: true,
+            customerName: true,
+            peopleCount: true,
             waiterId: true,
             status: true,
             total: true,
@@ -538,6 +657,9 @@ export async function createOpenOrder(
             restaurantId: principal.restaurantId,
             comandaNumber: input.comandaNumber,
             tableId: table?.id ?? null,
+            customerId: input.customerId ?? null,
+            customerName: input.customerName ?? null,
+            peopleCount: input.peopleCount ?? null,
             status: 'OPEN',
             total: '0.00',
             deviceId: input.deviceId,
@@ -548,6 +670,9 @@ export async function createOpenOrder(
             restaurantId: true,
             comandaNumber: true,
             tableId: true,
+            customerId: true,
+            customerName: true,
+            peopleCount: true,
             waiterId: true,
             status: true,
             total: true,
@@ -579,6 +704,9 @@ export async function createOpenOrder(
         restaurantId: true,
         comandaNumber: true,
         tableId: true,
+        customerId: true,
+        customerName: true,
+        peopleCount: true,
         waiterId: true,
         status: true,
         total: true,
@@ -1176,3 +1304,144 @@ type PaymentSummary = Readonly<{
   createdAt: string;
 }>;
 
+
+// ─── Customer ────────────────────────────────────────────────────────────────
+
+export type CustomerSummary = Readonly<{
+  id: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  notes: string | null;
+}>;
+
+function toCustomerSummary(c: {
+  id: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  notes: string | null;
+}): CustomerSummary {
+  return { id: c.id, name: c.name, phone: c.phone, email: c.email, notes: c.notes };
+}
+
+export async function listCustomers(
+  context: unknown,
+  query: Readonly<{ search?: string }> = {},
+  client: PrismaClient = prisma,
+): Promise<readonly CustomerSummary[]> {
+  const principal = requireOperationalReadAccess(context);
+  return client.$transaction(async (tx) => {
+    await assertCurrentPrincipal(tx, principal);
+    const customers = await tx.customer.findMany({
+      where: {
+        restaurantId: principal.restaurantId,
+        deletedAt: null,
+        ...(query.search
+          ? { name: { contains: query.search, mode: 'insensitive' } }
+          : {}),
+      },
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      select: { id: true, name: true, phone: true, email: true, notes: true },
+    });
+    return customers.map(toCustomerSummary);
+  });
+}
+
+export async function createCustomer(
+  context: unknown,
+  body: unknown,
+  client: PrismaClient = prisma,
+): Promise<CustomerSummary> {
+  const principal = requirePermission(context, 'ORDERS_CREATE');
+  const input = parseCreateCustomerInput(body);
+  return client.$transaction(async (tx) => {
+    await assertCurrentPrincipal(tx, principal);
+    const duplicate = await tx.customer.findFirst({
+      where: {
+        restaurantId: principal.restaurantId,
+        deletedAt: null,
+        name: { equals: input.name, mode: 'insensitive' },
+      },
+      select: { id: true },
+    });
+    if (duplicate) {
+      // Return the existing customer instead of erroring — allows idempotent use
+      const existing = await tx.customer.findUnique({
+        where: { id: duplicate.id },
+        select: { id: true, name: true, phone: true, email: true, notes: true },
+      });
+      if (existing) return toCustomerSummary(existing);
+    }
+    const customer = await tx.customer.create({
+      data: {
+        id: createId(),
+        restaurantId: principal.restaurantId,
+        name: input.name,
+        phone: input.phone ?? null,
+        email: input.email ?? null,
+        notes: input.notes ?? null,
+        version: 1,
+      },
+      select: { id: true, name: true, phone: true, email: true, notes: true },
+    });
+    return toCustomerSummary(customer);
+  });
+}
+
+// ─── Update order details (customer + people) ─────────────────────────────────
+
+export async function updateOrderDetails(
+  context: unknown,
+  orderId: string,
+  body: unknown,
+  client: PrismaClient = prisma,
+): Promise<OpenOrderSummary> {
+  const principal = requirePermission(context, 'ORDERS_CREATE');
+  if (!isUuidV7(orderId)) {
+    throw ApiProblemError.validation([
+      { path: 'orderId', code: 'invalid_uuid', message: 'Identificador de comanda inválido.' },
+    ]);
+  }
+  const input = parseUpdateOrderDetailsInput(body);
+
+  return client.$transaction(async (tx) => {
+    await assertCurrentPrincipal(tx, principal);
+    const order = await readOpenOrder(orderId, principal.restaurantId, tx);
+    if (!order) {
+      throw new ApiProblemError(
+        404,
+        'ORDER_NOT_FOUND',
+        'Comanda não encontrada',
+        'A comanda não existe ou já foi fechada.',
+      );
+    }
+    // Validate customerId if provided
+    if (input.customerId !== null) {
+      const customer = await tx.customer.findFirst({
+        where: {
+          id: input.customerId,
+          restaurantId: principal.restaurantId,
+          deletedAt: null,
+        },
+        select: { id: true },
+      });
+      if (!customer) {
+        throw ApiProblemError.validation([
+          { path: 'customerId', code: 'not_found', message: 'Cliente não encontrado.' },
+        ]);
+      }
+    }
+    const updated = await tx.order.update({
+      where: { id: orderId },
+      data: {
+        customerId: input.customerId,
+        customerName: input.customerName,
+        peopleCount: input.peopleCount,
+        version: { increment: 1 },
+      },
+      select: orderWithItemsSelect,
+    });
+    return toOpenOrderSummary(updated);
+  });
+}

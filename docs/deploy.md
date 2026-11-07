@@ -242,18 +242,20 @@ Topologia:
   `http.Server` **sem** chamar `listen()`; a plataforma roteia as requisições
   para o servidor exportado. `src/index.ts` continua com o `listen()` do dev
   local e do Docker.
-- **Build:** as bindings não resolvem em build, então `DATABASE_URL` e
-  `AUTH_SECRET` devem existir como variáveis normais do projeto (inclusive no
-  build). `NEXT_PUBLIC_REALTIME_URL` deve ficar **sem** valor no Vercel: sem
-  ela, o browser usa `window.location.origin` e o rewrite `/socket.io`
-  encaminha para o realtime. `runtime` não é fixado — o Vercel detecta Node
-  (>= 22) automaticamente.
+- **Build:** as bindings não resolvem em build, então `DATABASE_URL` (pooled,
+  runtime), `DIRECT_DATABASE_URL` (direta, para `prisma migrate deploy`/seed
+  executados manualmente) e `AUTH_SECRET` devem existir como variáveis normais
+  do projeto (inclusive no build). `NEXT_PUBLIC_REALTIME_URL` deve ficar **sem**
+  valor no Vercel: sem ela, o browser usa `window.location.origin` e o rewrite
+  `/socket.io` encaminha para o realtime. `runtime` não é fixado — o Vercel
+  detecta Node (>= 22) automaticamente.
 - **Redis:** configurar `REDIS_URL` (por exemplo Upstash) no projeto. Sem
   Redis, cada instância Fluid mantém os sockets em memória própria e um
   evento publicado não alcança clientes de outras instâncias.
 - **Migrações:** o Vercel não executa `prisma migrate` automaticamente;
-  aplicar manualmente no primeiro deploy (seção 7.3) com a `DATABASE_URL` de
-  produção: `pnpm --filter @mudra/database db:migrate:deploy`.
+  aplicar manualmente no primeiro deploy (seção 7.3) com a `DIRECT_DATABASE_URL`
+  (direta) de produção: `pnpm --filter @mudra/database db:migrate:deploy`. O
+  seed não interativo: `pnpm --filter @mudra/database seed:admin`.
 - **Auth.js:** o Auth.js confia no host encaminhado quando `VERCEL=1` está
   presente; `AUTH_TRUST_HOST` é dispensada neste provedor.
 - **CORS:** o browser fala com o mesmo domínio (rewrite), então
@@ -265,9 +267,10 @@ Topologia:
   não foi configurado.
 
 Passos do primeiro deploy: importar o repositório no Vercel (o workspace pnpm
-é detectado), revisar as variáveis da seção 6 para os ambientes do projeto,
-executar a migração manual e o pré-cadastro `seed:admin` (seção 7.3), fazer o
-deploy e rodar os smoke tests da seção 16 no domínio do Vercel.
+é detectado), revisar as variáveis da seção 6 para os ambientes do projeto
+(`DATABASE_URL` pooled + `DIRECT_DATABASE_URL` direta + segredos), executar a
+migração manual e o pré-cadastro `seed:admin` (seção 7.3), fazer o deploy e
+rodar os smoke tests da seção 16 no domínio do Vercel.
 
 ## 6. Variáveis de ambiente
 
@@ -278,7 +281,8 @@ provedor e mantenha conjuntos separados por ambiente.
 
 | Variável                   | Obrigatória        | Observação                                                           |
 | -------------------------- | ------------------ | -------------------------------------------------------------------- |
-| `DATABASE_URL`             | Sim                | Connection string do PostgreSQL; usar TLS quando o provedor exigir   |
+| `DATABASE_URL`             | Sim                | Connection string do PostgreSQL usada em runtime (app/Prisma Client). Com pooler serverless (ex.: Prisma Postgres `pooled.db.prisma.io`), usar a URL *pooled* aqui; TLS quando o provedor exigir |
+| `DIRECT_DATABASE_URL`      | Sim com pooler     | URL **direta** do PostgreSQL para migrações/`db:migrate:deploy`, seed e introspecção (`directUrl` no schema Prisma). Com banco sem pooler (Docker local), pode ser igual a `DATABASE_URL` |
 | `AUTH_SECRET`              | Sim                | Segredo do Auth.js; usar pelo menos 32 bytes aleatórios              |
 | `AUTH_URL`                 | Recomendada        | URL pública canônica, por exemplo `https://app.exemplo.com`          |
 | `AUTH_TRUST_HOST`          | Sim atrás de proxy | Definir `true` para o Auth.js confiar no host encaminhado pelo proxy |
@@ -289,6 +293,11 @@ provedor e mantenha conjuntos separados por ambiente.
 | `REALTIME_JWT_AUDIENCE`    | Opcional           | Se definido, precisa ser igual no web e no realtime                  |
 | `NODE_ENV`                 | Sim                | `production`                                                         |
 
+Integração **Prisma Postgres** (Vercel Storage): o painel expõe
+`STORAGE_PRISMA_DATABASE_URL`/`STORAGE_POSTGRES_URL` (direta, `db.prisma.io`)
+e `STORAGE_DATABASE_URL_POOLED` (pooled, `pooled.db.prisma.io`). Mapear para
+`DIRECT_DATABASE_URL` ← direta e `DATABASE_URL` ← pooled.
+
 `AUTH_SECRET` não é usado pelo CLI `create-admin`; ele é necessário quando a
 autenticação web é acessada. Não reutilize `AUTH_SECRET` como
 `REALTIME_JWT_SECRET`.
@@ -297,10 +306,13 @@ O nome `NEXTAUTH_URL` aparece na especificação, mas o código usa Auth.js v5.
 Configure `AUTH_URL`/`AUTH_TRUST_HOST` conforme a versão atual; não dependa de
 variáveis do Auth.js v4.
 
-No Vercel (seção 5.5), `REALTIME_URL` é injetada pela binding (não cadastrarà
+No Vercel (seção 5.5), `REALTIME_URL` é injetada pela binding (não cadastrar à
 mão), `REALTIME_INTERNAL_URL` e `NEXT_PUBLIC_REALTIME_URL` ficam sem valor, e
-`AUTH_TRUST_HOST` é dispensada. `DATABASE_URL` e `AUTH_SECRET` continuam
-obrigatórias inclusive no build.
+`AUTH_TRUST_HOST` é dispensada. `DATABASE_URL` (pooled), `DIRECT_DATABASE_URL`
+(direta) e `AUTH_SECRET` continuam obrigatórias inclusive no build. Se o
+painel fornecer variáveis `STORAGE_*` (Prisma Postgres), mapear
+`STORAGE_DATABASE_URL_POOLED` → `DATABASE_URL` e
+`STORAGE_PRISMA_DATABASE_URL` → `DIRECT_DATABASE_URL`.
 
 ### 6.2 Realtime
 
@@ -321,9 +333,10 @@ handshake. Use sempre HTTPS/WSS em produção e não use `*` como origem.
 
 ### 6.3 Migração e bootstrap
 
-| Variável       | Uso                                                                 |
-| -------------- | ------------------------------------------------------------------- |
-| `DATABASE_URL` | Necessária para `prisma migrate deploy` e para o CLI `create-admin` |
+| Variável              | Uso                                                                 |
+| --------------------- | ------------------------------------------------------------------- |
+| `DATABASE_URL`        | Runtime do Prisma Client e build; com pooler, usar a URL pooled      |
+| `DIRECT_DATABASE_URL` | `prisma migrate deploy` e CLIs (`create-admin`, `seed:admin`) usam a URL direta (`directUrl` no schema) |
 
 O CLI `create-admin` é interativo, solicita a senha no terminal e precisa de um
 TTY real. Execute-o em um shell confiável do provedor ou em uma máquina
@@ -358,8 +371,10 @@ somente no servidor e em um secret manager.
 
 - Produção usa `pnpm --filter @mudra/database db:migrate:deploy`.
 - Migrações devem usar uma conexão direta com o PostgreSQL, não um pooler em
-  modo transaction. Se o provedor oferecer URL pooled para o runtime, manter
-  uma URL direta separada para a migração.
+  modo transaction. O schema declara `directUrl = env("DIRECT_DATABASE_URL")`;
+  `prisma migrate deploy` usa essa URL direta. No runtime (Prisma Client),
+  `DATABASE_URL` pode ser a URL pooled (ex.: Prisma Postgres). Se o provedor
+  oferecer URL pooled, manter a direta separada em `DIRECT_DATABASE_URL`.
 - Nunca executar `prisma migrate dev`, `prisma db push` ou `prisma migrate reset`
   em produção.
 - Migrações são **forward-only**; não há down migrations automáticas. O

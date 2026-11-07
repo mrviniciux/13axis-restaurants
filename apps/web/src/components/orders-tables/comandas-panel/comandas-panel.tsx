@@ -2,9 +2,10 @@
 
 import { ComandaDetailPane } from '../comanda-detail-pane';
 import { ComandaMap } from '../comanda-map';
+import { LargeCardsView } from '../large-cards-view';
 import { OrderCard } from '../order-card';
 import { useOrdersTables, useOrdersTablesActions } from '@/store';
-import type { Order } from '@/lib/types';
+import type { Order, Table } from '@/lib/types';
 import { useOrdersTablesApi } from '@/hooks';
 import { TablesComandasTabs } from '@/components/tables-comandas-tabs';
 import type { TablesComandasView } from '@/lib/server/tables-comandas-view';
@@ -14,6 +15,7 @@ export function ComandasPanel({
   view,
   userId,
   tableNumbers,
+  tables,
   canManageMenu,
   canCloseOrders,
   canReceivePayments,
@@ -22,16 +24,20 @@ export function ComandasPanel({
   view: TablesComandasView;
   userId: string;
   tableNumbers: ReadonlyMap<string, number>;
+  tables?: readonly Table[];
   canManageMenu: boolean;
   canCloseOrders: boolean;
   canReceivePayments: boolean;
 }>) {
-  const { comandasTab, selectedComandaOrderId, pendingComandaNumber, tableActions } =
+  const { comandasTab, selectedComandaOrderId, pendingComandaNumber, tableActions,
+    openOrderCustomerName, openOrderPeopleCount } =
     useOrdersTables((state) => ({
       comandasTab: state.comandasTab,
       selectedComandaOrderId: state.selectedComandaOrderId,
       pendingComandaNumber: state.pendingComandaNumber,
       tableActions: state.tableActions,
+      openOrderCustomerName: state.openOrderCustomerName,
+      openOrderPeopleCount: state.openOrderPeopleCount,
     }));
   const standaloneOrderAction = tableActions.standalone;
   const actions = useOrdersTablesActions();
@@ -53,71 +59,117 @@ export function ComandasPanel({
         />
       </div>
       <div aria-labelledby={`${tabsId}-${comandasTab}`} id={`${tabsId}-panel`} role="tabpanel">
-        {comandasTab !== 'CARDS' ? (
-          <div
-            className={comandasTab === 'MAP_WITH_DETAILS' ? 'comanda-map-detail-layout' : undefined}
-          >
-            <ComandaMap orders={orders} />
-            {comandasTab === 'MAP_WITH_DETAILS' ? (
-              <ComandaDetailPane
-                canCloseOrders={canCloseOrders}
-                canManageMenu={canManageMenu}
-                canReceivePayments={canReceivePayments}
-                order={selectedOrder}
-                pendingComandaNumber={pendingComandaNumber}
-                tableNumbers={tableNumbers}
-              />
-            ) : null}
-          </div>
-        ) : null}
-        {view === 'MESA_E_COMANDA' || comandasTab === 'CARDS' ? (
-          <div className="new-order-form">
-            <button
-              className="secondary-button"
-              disabled={standaloneOrderAction?.status === 'pending'}
-              onClick={() => void api.openOrder()}
-              type="button"
-            >
-              {standaloneOrderAction?.status === 'pending'
-                ? 'Abrindo…'
-                : standaloneOrderAction?.status === 'error'
-                  ? 'Tentar novamente'
-                  : 'Abrir comanda sem mesa'}
-            </button>
-            {standaloneOrderAction ? (
-              <p
+        {comandasTab === 'LARGE_CARDS' ? (
+          <LargeCardsView
+            canCloseOrders={canCloseOrders}
+            canManageMenu={canManageMenu}
+            canReceivePayments={canReceivePayments}
+            orders={orders}
+            tableNumbers={tableNumbers}
+            tables={tables}
+            userId={userId}
+          />
+        ) : (
+          <>
+            {comandasTab !== 'CARDS' ? (
+              <div
                 className={
-                  standaloneOrderAction.status === 'error'
-                    ? 'action-feedback action-error'
-                    : 'action-feedback'
+                  comandasTab === 'MAP_WITH_DETAILS' ? 'comanda-map-detail-layout' : undefined
                 }
-                role={standaloneOrderAction.status === 'error' ? 'alert' : 'status'}
               >
-                {standaloneOrderAction.message}
-              </p>
+                <ComandaMap orders={orders} />
+                {comandasTab === 'MAP_WITH_DETAILS' ? (
+                  <ComandaDetailPane
+                    canCloseOrders={canCloseOrders}
+                    canManageMenu={canManageMenu}
+                    canReceivePayments={canReceivePayments}
+                    order={selectedOrder}
+                    pendingComandaNumber={pendingComandaNumber}
+                    tableNumbers={tableNumbers}
+                  />
+                ) : null}
+              </div>
             ) : null}
-          </div>
-        ) : null}
-        {orders.length === 0 ? (
-          <p className="empty-state">
-            {comandasTab === 'CARDS'
-              ? 'Não há comandas abertas no momento. Use “Abrir comanda sem mesa” para iniciar uma.'
-              : view === 'MESA_E_COMANDA'
-                ? 'Não há comandas abertas. Selecione um quadrado cinza ou use uma mesa ao lado para abrir uma comanda.'
-                : 'Não há comandas abertas. Selecione um quadrado cinza para abrir uma comanda.'}
-          </p>
-        ) : comandasTab === 'MAP_WITH_DETAILS' ? null : (
-          <ul className="open-order-list order-card-grid">
-            {orders.map((order) => (
-              <OrderCard
-                canManageMenu={canManageMenu}
-                key={order.id}
-                order={order}
-                tableNumbers={tableNumbers}
-                view={view}
-              />
-            ))}
-          </ul>
+            {view === 'MESA_E_COMANDA' || comandasTab === 'CARDS' ? (
+              <div className="new-order-form">
+                <div className="new-order-inputs">
+                  <label className="new-order-input-label">
+                    <span>Cliente</span>
+                    <input
+                      autoComplete="off"
+                      maxLength={200}
+                      onChange={(e) => actions.setOpenOrderCustomerName(e.target.value)}
+                      placeholder="Nome (opcional)"
+                      type="text"
+                      value={openOrderCustomerName}
+                    />
+                  </label>
+                  <label className="new-order-input-label new-order-people">
+                    <span>Pessoas</span>
+                    <input
+                      inputMode="numeric"
+                      max={999}
+                      min={1}
+                      onChange={(e) => actions.setOpenOrderPeopleCount(e.target.value)}
+                      placeholder="—"
+                      type="number"
+                      value={openOrderPeopleCount}
+                    />
+                  </label>
+                </div>
+                <button
+                  className="secondary-button"
+                  disabled={standaloneOrderAction?.status === 'pending'}
+                  onClick={() => void api.openOrder(
+                    undefined,
+                    undefined,
+                    openOrderCustomerName || undefined,
+                    openOrderPeopleCount ? parseInt(openOrderPeopleCount, 10) || undefined : undefined,
+                  )}
+                  type="button"
+                >
+                  {standaloneOrderAction?.status === 'pending'
+                    ? 'Abrindo…'
+                    : standaloneOrderAction?.status === 'error'
+                      ? 'Tentar novamente'
+                      : 'Abrir comanda sem mesa'}
+                </button>
+                {standaloneOrderAction ? (
+                  <p
+                    className={
+                      standaloneOrderAction.status === 'error'
+                        ? 'action-feedback action-error'
+                        : 'action-feedback'
+                    }
+                    role={standaloneOrderAction.status === 'error' ? 'alert' : 'status'}
+                  >
+                    {standaloneOrderAction.message}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+            {orders.length === 0 ? (
+              <p className="empty-state">
+                {comandasTab === 'CARDS'
+                  ? 'Não há comandas abertas no momento. Use “Abrir comanda sem mesa” para iniciar uma.'
+                  : view === 'MESA_E_COMANDA'
+                    ? 'Não há comandas abertas. Selecione um quadrado cinza ou use uma mesa ao lado para abrir uma comanda.'
+                    : 'Não há comandas abertas. Selecione um quadrado cinza para abrir uma comanda.'}
+              </p>
+            ) : comandasTab === 'MAP_WITH_DETAILS' ? null : (
+              <ul className="open-order-list order-card-grid">
+                {orders.map((order) => (
+                  <OrderCard
+                    canManageMenu={canManageMenu}
+                    key={order.id}
+                    order={order}
+                    tableNumbers={tableNumbers}
+                    view={view}
+                  />
+                ))}
+              </ul>
+            )}
+          </>
         )}
       </div>
     </section>

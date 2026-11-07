@@ -31,29 +31,32 @@ export function OrderItemView({
   return (
     <li className={editing ? 'is-editing' : undefined}>
       {editing ? (
-        <div className="edit-order-item">
-          <strong>{item.name}</strong>
-          <label>
-            Quantidade
-            <input
-              inputMode="decimal"
-              onChange={(event) =>
-                actions.updateItemDraft(item.id, { quantity: event.target.value })
-              }
-              value={draft?.quantity ?? item.quantity}
-            />
-          </label>
-          <label>
-            Observação
-            <input
-              maxLength={500}
-              onChange={(event) => actions.updateItemDraft(item.id, { notes: event.target.value })}
-              value={draft?.notes ?? item.notes ?? ''}
-            />
-          </label>
+        <div className="edit-order-item compact-edit">
+          <strong className="edit-item-title">{item.name}</strong>
+          <div className="edit-order-item-fields">
+            <label>
+              Qtd
+              <input
+                inputMode="decimal"
+                onChange={(event) =>
+                  actions.updateItemDraft(item.id, { quantity: event.target.value })
+                }
+                value={draft?.quantity ?? item.quantity}
+              />
+            </label>
+            <label className="edit-notes-label">
+              Obs
+              <input
+                maxLength={500}
+                onChange={(event) => actions.updateItemDraft(item.id, { notes: event.target.value })}
+                placeholder="Observação opcional"
+                value={draft?.notes ?? item.notes ?? ''}
+              />
+            </label>
+          </div>
           <div className="item-actions">
             <button
-              className="secondary-button"
+              className="secondary-button compact-btn"
               disabled={disabled}
               onClick={() => void api.saveItem(orderId, item)}
               type="button"
@@ -71,53 +74,63 @@ export function OrderItemView({
         </div>
       ) : context === 'detail' ? (
         <div className="comanda-detail-item-row">
-          <span>
-            <strong>
-              {item.quantity} × {item.name}
-            </strong>
-            <small>
-              {formatMoney(item.unitPrice)} por unidade
-              {item.notes ? ` · ${item.notes}` : ''}
-            </small>
-            {item.status ? <small>{itemStatus[item.status] ?? item.status}</small> : null}
-          </span>
-          <span className="comanda-detail-item-side">
-            <strong>{formatMoney(item.lineTotal)}</strong>
-            {item.status === null ? (
-              <ItemActions
-                disabled={disabled}
-                onConfirmDelete={() => void api.removeItem(orderId, item)}
-                onEdit={() => actions.startEditingItem(item)}
-                onCancelDelete={() => actions.cancelDeleteItem()}
-                pendingDeletion={orderPendingDeletion}
-              />
-            ) : null}
-          </span>
+          <div className="comanda-detail-item-left">
+            <div className="comanda-detail-item-title-row">
+              <strong className="comanda-detail-item-name">
+                {item.quantity} × {item.name}
+              </strong>
+              {item.notes ? (
+                <span className="comanda-detail-item-note">({item.notes})</span>
+              ) : null}
+              <span className="comanda-detail-item-unit">
+                · {formatMoney(item.unitPrice)}/un
+              </span>
+              {item.status ? (
+                <span className="comanda-detail-item-status-pill">
+                  {itemStatus[item.status] ?? item.status}
+                </span>
+              ) : null}
+            </div>
+          </div>
+          <div className="comanda-detail-item-side">
+            <strong className="comanda-detail-item-total">{formatMoney(item.lineTotal)}</strong>
+            <ItemActions
+              disabled={disabled}
+              onCancelDelete={() => actions.cancelDeleteItem()}
+              onConfirmDelete={() => void api.removeItem(orderId, item)}
+              onEdit={() => actions.startEditingItem(item)}
+              pendingDeletion={orderPendingDeletion}
+            />
+          </div>
         </div>
       ) : (
-        <>
-          <span>
-            <strong>
+        <div className="order-card-item-row">
+          <div className="order-card-item-left">
+            <strong className="order-card-item-name">
               {item.quantity} × {item.name}
             </strong>
-            {item.notes ? <small>{item.notes}</small> : null}
-            <small>
-              {item.status ? (itemStatus[item.status] ?? item.status) : 'Pendente de envio'}
-            </small>
-          </span>
-          <span>
-            {formatMoney(item.lineTotal)}
+            {item.notes ? (
+              <span className="order-card-item-note">({item.notes})</span>
+            ) : null}
+            {item.status ? (
+              <span className="order-card-item-status-pill">
+                {itemStatus[item.status] ?? item.status}
+              </span>
+            ) : null}
+          </div>
+          <div className="order-card-item-right">
+            <span className="order-card-item-price">{formatMoney(item.lineTotal)}</span>
             {item.status === null ? (
               <ItemActions
                 disabled={disabled}
+                onCancelDelete={() => actions.cancelDeleteItem()}
                 onConfirmDelete={() => void api.removeItem(orderId, item)}
                 onEdit={() => actions.startEditingItem(item)}
-                onCancelDelete={() => actions.cancelDeleteItem()}
                 pendingDeletion={orderPendingDeletion}
               />
             ) : null}
-          </span>
-        </>
+          </div>
+        </div>
       )}
       {mutation ? (
         <p
@@ -151,24 +164,24 @@ function ItemActions({
       {pendingDeletion ? (
         <>
           <button
-            className="text-button"
+            className="text-button item-action-btn is-delete"
             disabled={disabled}
             onClick={onConfirmDelete}
             type="button"
           >
-            Confirmar exclusão
+            Confirmar
           </button>
-          <button className="text-button" onClick={onCancelDelete} type="button">
+          <button className="text-button item-action-btn" onClick={onCancelDelete} type="button">
             Cancelar
           </button>
         </>
       ) : (
         <>
-          <button className="text-button" disabled={disabled} onClick={onEdit} type="button">
+          <button className="text-button item-action-btn" disabled={disabled} onClick={onEdit} type="button">
             Editar
           </button>
           <button
-            className="text-button"
+            className="text-button item-action-btn is-delete"
             disabled={disabled}
             onClick={onConfirmDelete}
             type="button"

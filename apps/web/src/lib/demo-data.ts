@@ -6,6 +6,8 @@ export type KitchenDemoTicket = {
   items: string[];
   elapsed: string;
   status: "Novo" | "Preparando" | "Pronto";
+  /** "order" = pedido de mesa/comanda; "restock" = reposição de buffet */
+  kind?: "order" | "restock";
 };
 
 export const demoKitchenTickets: KitchenDemoTicket[] = [
@@ -35,5 +37,20 @@ export const demoKitchenTickets: KitchenDemoTicket[] = [
     items: ["1× Salada da estação", "1× Suco de laranja"],
     elapsed: "16 min",
     status: "Pronto",
+  },
+  {
+    id: "demo-restock-001",
+    orderNumber: "1",
+    table: "Buffet",
+    checkId: "REPO-001",
+    items: [
+      "Peixe assado",
+      "Frango grelhado",
+      "Arroz branco",
+      "Legumes na manteiga",
+    ],
+    elapsed: "1 min",
+    status: "Novo",
+    kind: "restock",
   },
 ];

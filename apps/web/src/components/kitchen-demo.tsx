@@ -33,13 +33,15 @@ export function KitchenDemo() {
           return (
             <article aria-labelledby={headingId} className="ticket-card" key={ticket.id}>
               <div className="ticket-topline">
-                <span className="ticket-order">Pedido #{ticket.orderNumber}</span>
+                <span className="ticket-order" id={headingId}>
+                  {ticket.kind === "restock" ? "Reposição" : "Pedido"} #{ticket.orderNumber}
+                </span>
                 <span className={`status-pill ${statusClass[ticket.status]}`}>{ticket.status}</span>
               </div>
-              <h3 id={headingId}>{ticket.table}</h3>
+              {ticket.kind !== "restock" ? <h3>{ticket.table}</h3> : null}
               <p className="ticket-check">
                 <Hash aria-hidden="true" size={14} />
-                Comanda <strong>{ticket.checkId}</strong>
+                {ticket.kind === "restock" ? "Solicitação" : "Comanda"} <strong>{ticket.checkId}</strong>
               </p>
               <ul className="ticket-items">
                 {ticket.items.map((item) => (
@@ -57,8 +59,9 @@ export function KitchenDemo() {
 
       <p className="footer-note">
         Exemplo intencional: Mesa 08 aparece em dois pedidos diferentes, cada um com identificador
-        de comanda próprio. O MVP permite múltiplas comandas abertas por mesa; esta tela não é uma
-        fila operacional.
+        de comanda próprio. O MVP permite múltiplas comandas abertas por mesa. O último card
+        demonstra uma reposição de buffet — um tipo de solicitação da área de buffet para a
+        cozinha, sem mesa ou comanda de cliente associada. Esta tela não é uma fila operacional.
       </p>
     </section>
   );

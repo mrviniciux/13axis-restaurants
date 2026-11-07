@@ -237,6 +237,53 @@ KITCHEN   → visualizar pedidos, atualizar status de itens
 - Status do pedido: **enviado** → **em preparo** → **pronto** → **servido**
 - **Offline-first**: lançar produtos localmente mesmo sem rede; sync em background
 
+### 5.1.1 Comportamento Responsivo do Grid de Cards
+
+As abas **Mapa + Cards** e **Cards** renderizam cards em grids responsivos
+distintos, implementados em CSS (`globals.css`) com media queries explícitas.
+
+**Visão "Cards grandes"** (aba Mapa + Cards — grid `.large-cards-grid`):
+
+- Cada card (`.large-order-card`) é flex column com borda e padding `14px`
+- Mostra título, total, itens recentes e ações
+- Grid: 3 colunas em telas largas, 2 em telas médias, 1 em telas pequenas
+
+**Visão "Cards"** (aba Cards — grid `.order-card-grid`):
+
+- Cada card (`.order-card`) mostra: título (mesa/comanda), total, até 3 itens
+  recentes (nomes truncados com `text-overflow: ellipsis`) e ações rápidas
+- Itens têm `white-space: nowrap; overflow: hidden; text-overflow: ellipsis`
+  para truncar nomes longos sem estourar o card em larguras estreitas
+- Actions (`+ Adicionar item`, `Ver comanda`) usam `flex-wrap: wrap` para
+  empilhar caso o card esteja muito estreito
+
+**Regras de colunas — grid de order cards (`.order-card-grid`):**
+
+| Largura            | Colunas | Largura aprox. do card |
+| ------------------ | ------- | ---------------------- |
+| < 480px (mobile)   | 1       | 100%                   |
+| ≥ 480px            | 2       | ~290px@768             |
+| ≥ 1024px (desktop) | 3       | ~334px@1024            |
+| ≥ 1280px (desktop) | 4       | ~309px@1280            |
+
+Garantia: em **tablet (768px–1023px)** o grid de order cards exibe **2 colunas**
+(~290px por card) — largura suficiente para nomes de produto quebrarem linha
+de forma inteligente (`white-space: normal; overflow-wrap: anywhere`) ao
+invés de truncar em "1 × C…".
+
+**Regras de colunas — grid de cards grandes (`.large-cards-grid`):**
+
+| Largura      | Colunas |
+| ------------ | ------- |
+| > 1100px     | 3       |
+| 720px–1100px | 2       |
+| ≤ 720px      | 1       |
+
+Em cards de 2 colunas (tablet), a tag "Recente" é ocultada via CSS
+(`display: none` em `@media (max-width: 1100px)`) para dar espaço ao nome do
+item. O texto usa `flex: 1 1 0; min-width: 0` para que o ellipsis funcione
+corretamente dentro do flex row.
+
 ### 5.2 Cardápio (gerente — web)
 
 - Categorias e subcategorias
@@ -246,6 +293,18 @@ KITCHEN   → visualizar pedidos, atualizar status de itens
 - Horários de disponibilidade (item disponível só no almoço, por exemplo)
 - Modificação reflete via OTA/realtime nos apps dos garçons
 
+**5.2.1 Produtos de Buffet**
+
+- Cadastro de pratos que compõem o buffet (ex.: Peixe assado, Frango grelhado,
+  Arroz branco, Legumes na manteiga)
+- Campos: nome (obrigatório, 1–120 chars), descrição (opcional, máx 500) — sem
+  preço por porção (buffet é cobrado por peso ou taxa fixa)
+- Acessível a ADMIN no módulo Cardápio (`/menu`), em seção dedicada
+- A cozinha usa essa lista para receber solicitações de reposição no KDS
+- API: `POST /api/buffet-items` (criar); `listBuffetItems` (listar, ADMIN/WAITER)
+- Validação: nome único por restaurante (case-insensitive), Zod schema no backend
+- Model: `BuffetItem` no Prisma (id, restaurantId, name, description, available)
+
 ### 5.3 Pedidos e Cozinha (Kitchen Display)
 
 - **Kitchen Display System (KDS)**: tela mostrando pedidos em fila
@@ -254,6 +313,43 @@ KITCHEN   → visualizar pedidos, atualizar status de itens
 - Alerta visual quando tempo excede limite configurável
 - Som/notificação quando novo pedido chega
 - Funciona em tablet (web) ou app
+
+**Reposição de Buffet no KDS:**
+
+- O KDS exibe dois tipos de card: **Pedido** (comanda de mesa) e **Reposição**
+  (reposição de buffet)
+- Cards de reposição **não têm mesa** — o título é "Reposição #N" (ex.:
+  "Reposição #1"), que também serve como cabeçalho acessível do card
+- Cada card de reposição lista os pratos de buffet a serem repostos
+- Identificador de solicitação (ex.: "Solicitação REPO-001") substitui o
+  identificador de comanda
+- Status segue o mesmo fluxo: **Novo** → **Preparando** → **Pronto**
+
+### 5.3.1 Abertura de comanda com cliente e número de pessoas
+
+Na abertura de comanda (tanto pelo botão "Abrir comanda sem mesa" nas abas Cards/Mesa+Comanda,
+quanto pelo `OpenComandaPane` no mapa de comandas), o fluxo expõe dois campos opcionais:
+
+- **Cliente** — texto livre (máx 200 chars); o servidor persiste em `Order.customerName`
+- **Pessoas** — inteiro 1–999; persiste em `Order.peopleCount`
+
+Os valores são passados via `POST /api/orders` e armazenados na abertura. Após a comanda
+existir, ambos podem ser editados a qualquer momento via `PATCH /api/orders/:id`, disponível
+no painel de detalhamento lateral (Mapa + detalhamento) e no modal "Ver comanda". A edição
+usa o componente compartilhado `OrderCustomerSection`, renderizado em ambas as superfícies
+da mesma forma que `DetailAddProductForm` e `OrderBillingSection`.
+
+A visão **Large cards** exibe `customerName` e `peopleCount` reais do order quando
+preenchidos, com fallback para metadados de demo quando ambos são `null`.
+
+### 5.3.2 Cadastro de clientes
+
+- Model `Customer` no banco: `id`, `restaurantId`, `name`, `phone?`, `email?`, `notes?`
+- Listagem com busca por nome: `GET /api/customers?search=...`
+- Criação: `POST /api/customers` — duplicata pelo nome retorna o existente (idempotente)
+- `Order.customerId` é FK opcional para `Customer`; `Order.customerName` é texto livre
+  independente, permitindo capturar o nome antes de criar o cadastro formal
+- Acesso de leitura: ADMIN e WAITER; criação: qualquer usuário com `ORDERS_CREATE`
 
 ### 5.4 Reservas
 
@@ -329,6 +425,7 @@ Restaurant (1 registro — preparado para multi-tenant futuro)
   └── Supplier (nome, contato, CNPJ)
   └── Shift (funcionário, entrada, saída)
   └── CashRegister (turno, abertura, fechamento, saldo inicial/final)
+  └── BuffetItem (nome, descrição, disponível — pratos do buffet p/ reposição)
 ```
 
 ### 6.2 Estratégia de IDs
