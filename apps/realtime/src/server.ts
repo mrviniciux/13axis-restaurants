@@ -242,14 +242,25 @@ function parseCorsOrigins(value: string | undefined): string[] {
     .filter(Boolean);
 }
 
-export async function startServer(env: NodeJS.ProcessEnv = process.env): Promise<{
+export type RealtimeRuntime = {
   io: SocketIOServer;
   httpServer: HttpServer;
+  port: number;
+  host: string;
   close: () => Promise<void>;
-}> {
+};
+
+/**
+ * Monta o runtime (auth, Socket.IO e Redis opcional) sem abrir listener.
+ * É o caminho usado como entrypoint em plataformas que roteiam requisições
+ * para o `http.Server` exportado (Vercel Services); `startServer` adiciona
+ * o listen para dev local e Docker.
+ */
+export async function createRuntime(env: NodeJS.ProcessEnv = process.env): Promise<RealtimeRuntime> {
   // Validate required auth before opening a listener or attempting Redis.
   const jwtSecret = loadJwtSecret(env.REALTIME_JWT_SECRET);
-  const port = parsePort(env.SOCKET_IO_PORT);
+  // SOCKET_IO_PORT (dev/Docker) tem prioridade; PORT é o padrão de plataformas.
+  const port = parsePort(env.SOCKET_IO_PORT || env.PORT || undefined);
   const host = env.HOST || "0.0.0.0";
   const httpServer = createServer();
   let redisPublisher: ReturnType<typeof createClient> | undefined;
@@ -274,14 +285,6 @@ export async function startServer(env: NodeJS.ProcessEnv = process.env): Promise
       await Promise.all([redisPublisher.connect(), redisSubscriber.connect()]);
       io.adapter(createAdapter(redisPublisher, redisSubscriber));
     }
-
-    await new Promise<void>((resolve, reject) => {
-      httpServer.once("error", reject);
-      httpServer.listen(port, host, () => {
-        httpServer.off("error", reject);
-        resolve();
-      });
-    });
   } catch (error) {
     io.close();
     await Promise.allSettled([
@@ -290,8 +293,6 @@ export async function startServer(env: NodeJS.ProcessEnv = process.env): Promise
     ]);
     throw error;
   }
-
-  console.info(`Realtime Socket.IO listening on ${host}:${port}; Redis adapter ${env.REDIS_URL ? "enabled" : "disabled"}.`);
 
   let closing: Promise<void> | undefined;
   const close = (): Promise<void> => {
@@ -305,7 +306,45 @@ export async function startServer(env: NodeJS.ProcessEnv = process.env): Promise
     return closing;
   };
 
-  return { io, httpServer, close };
+  return { io, httpServer, port, host, close };
+}
+
+/**
+ * Mensagem de erro segura para logs de startup: só repassa detalhes de
+ * configuração de auth/porta; o resto vira um texto genérico para não
+ * vazar URLs, credenciais ou detalhes do provedor.
+ */
+export function describeStartupError(error: unknown): string {
+  const message = error instanceof Error ? error.message : "";
+  if (
+    message.startsWith("REALTIME_JWT_SECRET is required") ||
+    message.startsWith("REALTIME_JWT_SECRET must contain") ||
+    message.startsWith("SOCKET_IO_PORT must be")
+  ) {
+    return message;
+  }
+  return "Realtime server startup failed; check server configuration and dependencies.";
+}
+
+export async function startServer(env: NodeJS.ProcessEnv = process.env): Promise<RealtimeRuntime> {
+  const runtime = await createRuntime(env);
+  try {
+    await new Promise<void>((resolve, reject) => {
+      runtime.httpServer.once("error", reject);
+      runtime.httpServer.listen(runtime.port, runtime.host, () => {
+        runtime.httpServer.off("error", reject);
+        resolve();
+      });
+    });
+  } catch (error) {
+    // Mesmo caminho de limpeza do erro de montagem: encerra io e Redis.
+    await runtime.close();
+    throw error;
+  }
+
+  console.info(`Realtime Socket.IO listening on ${runtime.host}:${runtime.port}; Redis adapter ${env.REDIS_URL ? "enabled" : "disabled"}.`);
+
+  return runtime;
 }
 
 export { RoleSchema };

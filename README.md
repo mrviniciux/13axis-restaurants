@@ -12,7 +12,8 @@ para operação offline-first.
 - `packages/database`: schema Prisma, acesso PostgreSQL, migrations e CLIs
 - `packages/shared`: tipos, validações Zod e utilitários compartilhados
 - Banco local: PostgreSQL 16 em Docker Compose
-- Produção: containers Docker independentes de web e realtime (ver `docs/deploy.md`)
+- Produção: containers Docker independentes de web e realtime ou projeto
+  Vercel com services (ver `docs/deploy.md`)
 
 ## Requisitos
 

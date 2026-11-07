@@ -26,7 +26,10 @@ async function publishRealtimeEvent(
     return;
   }
 
+  // Precedência: binding do Vercel (REALTIME_URL) → docker-compose
+  // (REALTIME_INTERNAL_URL) → dev local (127.0.0.1).
   const realtimeOrigin =
+    process.env.REALTIME_URL?.trim() ||
     process.env.REALTIME_INTERNAL_URL?.trim() ||
     `http://127.0.0.1:${process.env.SOCKET_IO_PORT?.trim() || '3001'}`;
   let endpoint: URL;
@@ -37,7 +40,7 @@ async function publishRealtimeEvent(
     }
   } catch {
     console.error('Realtime order event was not published.', {
-      reason: 'REALTIME_INTERNAL_URL is invalid.',
+      reason: 'REALTIME_URL or REALTIME_INTERNAL_URL is invalid.',
     });
     return;
   }

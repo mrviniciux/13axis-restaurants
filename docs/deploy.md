@@ -1,11 +1,11 @@
 # Estratégia de deploy — Mudra for Restaurants
 
 **Status:** proposta operacional para o MVP. Os Dockerfiles de produção
-(`apps/web`, `apps/realtime`, `packages/database`), o `compose.yaml` e os
-health checks estão versionados; a automação de deploy na CI ainda não está
-implementada.
+(`apps/web`, `apps/realtime`, `packages/database`), o `compose.yaml`, o
+`vercel.json` (services e bindings) e os health checks estão versionados; a
+automação de deploy na CI ainda não está implementada.
 
-**Última revisão:** 06/11/2026
+**Última revisão:** 07/11/2026
 
 **Base:** `specification.md` (§§ 12–13), `README.md`,
 `docs/architecture/realtime-contracts.md`, `apps/realtime/README.md` e o
@@ -39,7 +39,7 @@ deve ter seu próprio projeto/banco.
 > A especificação cita Railway como opção recomendada e Hetzner + Coolify como
 > alternativa de custo. Esta estratégia usa **Hetzner + Coolify como prioridade**
 > (ver `orcamento-whatsapp.md` e `pesquisa-opcoes-baratas.md`); o Railway está
-> descrito como alternativa na seção 5.4.
+> descrito como alternativa na seção 5.4 e o Vercel (services) na seção 5.5.
 
 ## 2. Arquitetura alvo
 
@@ -217,6 +217,58 @@ paths", limite cada serviço aos caminhos que o afetam: `apps/web/**`,
 web; `apps/realtime/**`, `packages/shared/**` e arquivos de lock/config para o
 realtime.
 
+### 5.5 Alternativa: Vercel (services)
+
+O repositório versiona um `vercel.json` que publica web e realtime no mesmo
+projeto Vercel como dois serviços (docs:
+<https://vercel.com/docs/services>).
+
+| Serviço    | Root            | Configuração                                                             |
+| ---------- | --------------- | ------------------------------------------------------------------------ |
+| `realtime` | `apps/realtime` | `entrypoint: src/entry.ts`; build `pnpm --filter @mudra/realtime... build` |
+| `web`      | `apps/web`      | `framework: nextjs`; build `pnpm --filter @mudra/web... build`            |
+
+Topologia:
+
+- **Públicos:** `web` em `/(.*)` (catch-all) e `realtime` somente em
+  `/socket.io/(.*)` (handshake WebSocket/long-polling). `/health` e
+  `/internal/events` não têm rewrite e ficam internos.
+- **Binding:** o `web` declara `type: service`, `service: realtime`,
+  `format: url`, `env: REALTIME_URL`. A URL é injetada somente em runtime de
+  functions — nunca em build nem em middleware — e o web publica em
+  `POST /internal/events` dessa URL (código com fallback para
+  `REALTIME_INTERNAL_URL` e depois `127.0.0.1:3001`).
+- **Entrypoint do realtime:** `src/entry.ts` monta o runtime e exporta o
+  `http.Server` **sem** chamar `listen()`; a plataforma roteia as requisições
+  para o servidor exportado. `src/index.ts` continua com o `listen()` do dev
+  local e do Docker.
+- **Build:** as bindings não resolvem em build, então `DATABASE_URL` e
+  `AUTH_SECRET` devem existir como variáveis normais do projeto (inclusive no
+  build). `NEXT_PUBLIC_REALTIME_URL` deve ficar **sem** valor no Vercel: sem
+  ela, o browser usa `window.location.origin` e o rewrite `/socket.io`
+  encaminha para o realtime. `runtime` não é fixado — o Vercel detecta Node
+  (>= 22) automaticamente.
+- **Redis:** configurar `REDIS_URL` (por exemplo Upstash) no projeto. Sem
+  Redis, cada instância Fluid mantém os sockets em memória própria e um
+  evento publicado não alcança clientes de outras instâncias.
+- **Migrações:** o Vercel não executa `prisma migrate` automaticamente;
+  aplicar manualmente no primeiro deploy (seção 7.3) com a `DATABASE_URL` de
+  produção: `pnpm --filter @mudra/database db:migrate:deploy`.
+- **Auth.js:** o Auth.js confia no host encaminhado quando `VERCEL=1` está
+  presente; `AUTH_TRUST_HOST` é dispensada neste provedor.
+- **CORS:** o browser fala com o mesmo domínio (rewrite), então
+  `REALTIME_CORS_ORIGINS` é dispensada; se definida, usar o domínio exato.
+- O `output: "standalone"` do `apps/web/next.config.ts` existe para o Docker.
+  Se o builder do Vercel reclamar no primeiro build, avaliar condicionar o
+  output ao ambiente.
+- O desenvolvimento local continua com `pnpm dev` (seção 5.2); `vercel dev`
+  não foi configurado.
+
+Passos do primeiro deploy: importar o repositório no Vercel (o workspace pnpm
+é detectado), revisar as variáveis da seção 6 para os ambientes do projeto,
+executar a migração manual (seção 7.3), fazer o deploy e rodar os smoke tests
+da seção 16 no domínio do Vercel.
+
 ## 6. Variáveis de ambiente
 
 Nunca versionar `.env` nem valores reais. Use o gerenciador de variáveis do
@@ -244,6 +296,11 @@ autenticação web é acessada. Não reutilize `AUTH_SECRET` como
 O nome `NEXTAUTH_URL` aparece na especificação, mas o código usa Auth.js v5.
 Configure `AUTH_URL`/`AUTH_TRUST_HOST` conforme a versão atual; não dependa de
 variáveis do Auth.js v4.
+
+No Vercel (seção 5.5), `REALTIME_URL` é injetada pela binding (não cadastrarà
+mão), `REALTIME_INTERNAL_URL` e `NEXT_PUBLIC_REALTIME_URL` ficam sem valor, e
+`AUTH_TRUST_HOST` é dispensada. `DATABASE_URL` e `AUTH_SECRET` continuam
+obrigatórias inclusive no build.
 
 ### 6.2 Realtime
 
@@ -709,3 +766,5 @@ Executar em staging e produção após cada release:
 - `.github/workflows/ci.yml` — pipeline atual de integração contínua.
 - `compose.yaml` e Dockerfiles (`apps/web`, `apps/realtime`,
   `packages/database`) — infraestrutura de containers versionada.
+- `vercel.json` — serviços, bindings e rewrites do deploy no Vercel
+  (seção 5.5).

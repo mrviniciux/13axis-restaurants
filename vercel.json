@@ -1,0 +1,37 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "realtime": {
+      "root": "apps/realtime",
+      "entrypoint": "src/entry.ts",
+      "buildCommand": "pnpm --filter @mudra/realtime... build"
+    },
+    "web": {
+      "root": "apps/web",
+      "framework": "nextjs",
+      "buildCommand": "pnpm --filter @mudra/web... build",
+      "bindings": [
+        {
+          "type": "service",
+          "service": "realtime",
+          "format": "url",
+          "env": "REALTIME_URL"
+        }
+      ]
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/socket.io/(.*)",
+      "destination": {
+        "service": "realtime"
+      }
+    },
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "web"
+      }
+    }
+  ]
+}

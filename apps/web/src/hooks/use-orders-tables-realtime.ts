@@ -23,7 +23,12 @@ export function useOrdersTablesRealtime(enabled: boolean) {
       fallbackRefresh = undefined;
     };
 
-    const socket = io(process.env.NEXT_PUBLIC_REALTIME_URL || 'http://localhost:3001', {
+    // Sem NEXT_PUBLIC_REALTIME_URL (ex.: Vercel) o realtime é público no
+    // mesmo domínio via rewrite /socket.io; em dev local ele roda na 3001.
+    const realtimeUrl =
+      process.env.NEXT_PUBLIC_REALTIME_URL ||
+      (process.env.NODE_ENV === 'production' ? window.location.origin : 'http://localhost:3001');
+    const socket = io(realtimeUrl, {
       autoConnect: false,
       transports: ['websocket', 'polling'],
       auth: (callback) => {
