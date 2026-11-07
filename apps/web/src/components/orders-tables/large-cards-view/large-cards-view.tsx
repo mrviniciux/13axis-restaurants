@@ -219,7 +219,7 @@ function resolveCardStatus(
     return 'BILL_REQUESTED';
   }
   if (order.comandaNumber !== null && DEMO_METADATA[order.comandaNumber]?.mockStatus) {
-    return DEMO_METADATA[order.comandaNumber].mockStatus;
+    return DEMO_METADATA[order.comandaNumber].mockStatus!;
   }
   return 'IN_SERVICE';
 }
@@ -445,7 +445,7 @@ export function LargeCardsView({
             <span className="large-cards-metric-lbl">pessoas no salão</span>
           </div>
           <div className="large-cards-metric-item">
-            <span className="large-cards-metric-val">{formatMoney(totalEmAberto)}</span>
+            <span className="large-cards-metric-val">{formatMoney(totalEmAberto.toFixed(2))}</span>
             <span className="large-cards-metric-lbl">total em aberto¹</span>
           </div>
         </div>
@@ -598,7 +598,7 @@ export function LargeCardsView({
                     <span>{card.elapsed}</span>
                   </div>
                   <strong className="large-card-total">
-                    {formatMoney(card.totalNumber)}
+                    {formatMoney(card.totalNumber.toFixed(2))}
                   </strong>
                 </div>
 
