@@ -266,8 +266,8 @@ Topologia:
 
 Passos do primeiro deploy: importar o repositório no Vercel (o workspace pnpm
 é detectado), revisar as variáveis da seção 6 para os ambientes do projeto,
-executar a migração manual (seção 7.3), fazer o deploy e rodar os smoke tests
-da seção 16 no domínio do Vercel.
+executar a migração manual e o pré-cadastro `seed:admin` (seção 7.3), fazer o
+deploy e rodar os smoke tests da seção 16 no domínio do Vercel.
 
 ## 6. Variáveis de ambiente
 
@@ -400,6 +400,18 @@ que o `docker compose run` fornece):
 docker compose --profile migrate run --rm migrate
 docker compose --profile migrate run --rm migrate pnpm --filter @mudra/database create-admin
 ```
+
+Para cadastro não interativo (recomendado no Vercel, onde não há TTY), usar o
+seed idempotente:
+
+```bash
+pnpm --filter @mudra/database seed:admin
+```
+
+Ele cria o restaurante e o administrador definidos em
+`packages/database/src/cli/seed-admin.ts` quando o banco está vazio,
+reaproveita os existentes e confere/redefine a senha do administrador para o
+valor do seed. Revisar a senha antes de expor o ambiente em produção.
 
 O `create-admin` também compila o pacote `@mudra/database`. Execute-o com
 `DATABASE_URL` apontando para o banco correto. Não execute os seeds

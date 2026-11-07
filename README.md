@@ -68,6 +68,18 @@ terminal e oculta a senha digitada:
 pnpm --filter @mudra/database create-admin
 ```
 
+Para um cadastro não interativo e idempotente (banco novo sem TTY, como o do
+Vercel), use o seed pré-configurado:
+
+```powershell
+pnpm --filter @mudra/database seed:admin
+```
+
+Ele cria `Mudra Alimentos` com o ADMIN `httpmarks@gmail.com` quando o banco
+está vazio, reaproveita os existentes e confere a senha do administrador.
+Os dados ficam em `packages/database/src/cli/seed-admin.ts`; revise a senha
+antes de expor o ambiente em produção.
+
 Para experimentar mesas e comandas, carregue dados locais de demonstração.
 Os comandos só funcionam com `NODE_ENV=development`; os seeds de mesas e menu
 recusam cadastros existentes e o seed de comandas preenche apenas os números

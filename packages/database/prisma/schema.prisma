@@ -44,6 +44,8 @@ enum OrderItemStatus {
 model Restaurant {
   id             String    @id @db.Uuid
   name           String
+  cnpj           String?
+  address        String?
   comandaNumbers String    @default("{20-110}")
   createdAt      DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt      DateTime  @updatedAt @db.Timestamptz(3)

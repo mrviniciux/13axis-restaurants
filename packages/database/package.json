@@ -23,6 +23,7 @@
     "db:migrate:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "create-admin": "pnpm build && node dist/cli/create-admin.js",
+    "seed:admin": "pnpm build && node dist/cli/seed-admin.js",
     "seed:demo-tables": "pnpm build && node dist/cli/seed-demo-tables.js",
     "seed:demo-menu": "pnpm build && node dist/cli/seed-demo-menu.js",
     "seed:demo-orders": "pnpm build && node dist/cli/seed-demo-orders.js",
