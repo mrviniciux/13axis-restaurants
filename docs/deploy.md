@@ -247,7 +247,9 @@ Topologia:
   do build web de produção) e `AUTH_SECRET` devem existir como variáveis normais
   do projeto (inclusive no build). O script de build executa `prisma migrate
   deploy` somente quando `VERCEL_ENV=production`; builds de Preview não alteram
-  o banco. `NEXT_PUBLIC_REALTIME_URL` deve ficar **sem**
+  o banco. Se `DIRECT_DATABASE_URL` não estiver definida, o script aceita as
+  variáveis diretas `STORAGE_PRISMA_DATABASE_URL` ou `STORAGE_POSTGRES_URL` do
+  Prisma Storage. `NEXT_PUBLIC_REALTIME_URL` deve ficar **sem**
   valor no Vercel: sem ela, o browser usa `window.location.origin` e o rewrite
   `/socket.io` encaminha para o realtime. `runtime` não é fixado — o Vercel
   detecta Node (>= 22) automaticamente.
