@@ -64,6 +64,7 @@ export function OrderSummaryDialog({
             </button>
           </header>
           <div className="order-summary-content comanda-detail-content">
+            <OrderCustomerSection order={order} />
             {order.items.length === 0 ? (
               <p className="order-empty">Nenhum produto lançado nesta comanda.</p>
             ) : (
@@ -73,7 +74,6 @@ export function OrderSummaryDialog({
                 ))}
               </ul>
             )}
-            <OrderCustomerSection order={order} />
             <DetailAddProductForm canManageMenu={canManageMenu} order={order} />
             <OrderBillingSection
               canCloseOrders={canCloseOrders}
