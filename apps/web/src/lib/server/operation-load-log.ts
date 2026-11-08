@@ -16,6 +16,8 @@ export function logOperationalDataLoadFailure(
   const schemaTarget = errorMeta?.target;
   const modelName = errorMeta?.modelName;
   const column = errorMeta?.column;
+  const fieldName = errorMeta?.field_name;
+  const table = errorMeta?.table;
 
   console.error('Operational data load failed.', {
     surface,
@@ -24,5 +26,7 @@ export function logOperationalDataLoadFailure(
     ...(typeof modelName === 'string' ? { modelName } : {}),
     ...(typeof column === 'string' ? { column } : {}),
     ...(typeof schemaTarget === 'string' ? { target: schemaTarget } : {}),
+    ...(typeof fieldName === 'string' ? { fieldName } : {}),
+    ...(typeof table === 'string' ? { table } : {}),
   });
 }

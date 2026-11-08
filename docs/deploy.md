@@ -226,7 +226,7 @@ projeto Vercel como dois serviços (docs:
 | Serviço    | Root            | Configuração                                                             |
 | ---------- | --------------- | ------------------------------------------------------------------------ |
 | `realtime` | `apps/realtime` | `entrypoint: src/entry.ts`; build `pnpm --filter @mudra/realtime... build` |
-| `web`      | `apps/web`      | `framework: nextjs`; build `node ../../scripts/vercel-web-build.mjs`       |
+| `web`      | `apps/web`      | `framework: nextjs`; build `node scripts/vercel-web-build.mjs`             |
 
 Topologia:
 
