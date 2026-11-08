@@ -226,7 +226,7 @@ projeto Vercel como dois serviços (docs:
 | Serviço    | Root            | Configuração                                                             |
 | ---------- | --------------- | ------------------------------------------------------------------------ |
 | `realtime` | `apps/realtime` | `entrypoint: src/entry.ts`; build `pnpm --filter @mudra/realtime... build` |
-| `web`      | `apps/web`      | `framework: nextjs`; build `pnpm --filter @mudra/web... build`            |
+| `web`      | `apps/web`      | `framework: nextjs`; build `node ../../scripts/vercel-web-build.mjs`       |
 
 Topologia:
 
@@ -243,18 +243,20 @@ Topologia:
   para o servidor exportado. `src/index.ts` continua com o `listen()` do dev
   local e do Docker.
 - **Build:** as bindings não resolvem em build, então `DATABASE_URL` (pooled,
-  runtime), `DIRECT_DATABASE_URL` (direta, para `prisma migrate deploy`/seed
-  executados manualmente) e `AUTH_SECRET` devem existir como variáveis normais
-  do projeto (inclusive no build). `NEXT_PUBLIC_REALTIME_URL` deve ficar **sem**
+  runtime), `DIRECT_DATABASE_URL` (direta, usada para aplicar migrations antes
+  do build web de produção) e `AUTH_SECRET` devem existir como variáveis normais
+  do projeto (inclusive no build). O script de build executa `prisma migrate
+  deploy` somente quando `VERCEL_ENV=production`; builds de Preview não alteram
+  o banco. `NEXT_PUBLIC_REALTIME_URL` deve ficar **sem**
   valor no Vercel: sem ela, o browser usa `window.location.origin` e o rewrite
   `/socket.io` encaminha para o realtime. `runtime` não é fixado — o Vercel
   detecta Node (>= 22) automaticamente.
 - **Redis:** configurar `REDIS_URL` (por exemplo Upstash) no projeto. Sem
   Redis, cada instância Fluid mantém os sockets em memória própria e um
   evento publicado não alcança clientes de outras instâncias.
-- **Migrações:** o Vercel não executa `prisma migrate` automaticamente;
-  aplicar manualmente no primeiro deploy (seção 7.3) com a `DIRECT_DATABASE_URL`
-  (direta) de produção: `pnpm --filter @mudra/database db:migrate:deploy`. O
+- **Migrações:** o build do serviço web aplica automaticamente migrations
+  pendentes em produção usando `DIRECT_DATABASE_URL`, antes de compilar o app.
+  Em outros provedores, aplicar manualmente no primeiro deploy (seção 7.3). O
   seed não interativo: `pnpm --filter @mudra/database seed:admin`.
 - **Auth.js:** o Auth.js confia no host encaminhado quando `VERCEL=1` está
   presente; `AUTH_TRUST_HOST` é dispensada neste provedor.
