@@ -6,8 +6,8 @@ import { LargeCardsView } from '../large-cards-view';
 import { OrderCard } from '../order-card';
 import { useOrdersTables, useOrdersTablesActions } from '@/store';
 import type { Order, Table } from '@/lib/types';
-import { useOrdersTablesApi } from '@/hooks';
 import { TablesComandasTabs } from '@/components/tables-comandas-tabs';
+import { StandaloneOrderForm } from '../standalone-order-form/standalone-order-form';
 import type { TablesComandasView } from '@/lib/server/tables-comandas-view';
 
 export function ComandasPanel({
@@ -29,19 +29,13 @@ export function ComandasPanel({
   canCloseOrders: boolean;
   canReceivePayments: boolean;
 }>) {
-  const { comandasTab, selectedComandaOrderId, pendingComandaNumber, tableActions,
-    openOrderCustomerName, openOrderPeopleCount } =
+  const { comandasTab, selectedComandaOrderId, pendingComandaNumber } =
     useOrdersTables((state) => ({
       comandasTab: state.comandasTab,
       selectedComandaOrderId: state.selectedComandaOrderId,
       pendingComandaNumber: state.pendingComandaNumber,
-      tableActions: state.tableActions,
-      openOrderCustomerName: state.openOrderCustomerName,
-      openOrderPeopleCount: state.openOrderPeopleCount,
     }));
-  const standaloneOrderAction = tableActions.standalone;
   const actions = useOrdersTablesActions();
-  const api = useOrdersTablesApi();
   const tabsId = `tables-comandas-view-${userId}`;
   const selectedOrder = orders.find((order) => order.id === selectedComandaOrderId) ?? null;
 
@@ -91,67 +85,12 @@ export function ComandasPanel({
               </div>
             ) : null}
             {view === 'MESA_E_COMANDA' || comandasTab === 'CARDS' ? (
-              <div className="new-order-form">
-                <div className="new-order-inputs">
-                  <label className="new-order-input-label">
-                    <span>Cliente</span>
-                    <input
-                      autoComplete="off"
-                      maxLength={200}
-                      onChange={(e) => actions.setOpenOrderCustomerName(e.target.value)}
-                      placeholder="Nome (opcional)"
-                      type="text"
-                      value={openOrderCustomerName}
-                    />
-                  </label>
-                  <label className="new-order-input-label new-order-people">
-                    <span>Pessoas</span>
-                    <input
-                      inputMode="numeric"
-                      max={999}
-                      min={1}
-                      onChange={(e) => actions.setOpenOrderPeopleCount(e.target.value)}
-                      placeholder="—"
-                      type="number"
-                      value={openOrderPeopleCount}
-                    />
-                  </label>
-                </div>
-                <button
-                  className="secondary-button"
-                  disabled={standaloneOrderAction?.status === 'pending'}
-                  onClick={() => void api.openOrder(
-                    undefined,
-                    undefined,
-                    openOrderCustomerName || undefined,
-                    openOrderPeopleCount ? parseInt(openOrderPeopleCount, 10) || undefined : undefined,
-                  )}
-                  type="button"
-                >
-                  {standaloneOrderAction?.status === 'pending'
-                    ? 'Abrindo…'
-                    : standaloneOrderAction?.status === 'error'
-                      ? 'Tentar novamente'
-                      : 'Abrir comanda sem mesa'}
-                </button>
-                {standaloneOrderAction ? (
-                  <p
-                    className={
-                      standaloneOrderAction.status === 'error'
-                        ? 'action-feedback action-error'
-                        : 'action-feedback'
-                    }
-                    role={standaloneOrderAction.status === 'error' ? 'alert' : 'status'}
-                  >
-                    {standaloneOrderAction.message}
-                  </p>
-                ) : null}
-              </div>
+              <StandaloneOrderForm />
             ) : null}
             {orders.length === 0 ? (
               <p className="empty-state">
                 {comandasTab === 'CARDS'
-                  ? 'Não há comandas abertas no momento. Use “Abrir comanda sem mesa” para iniciar uma.'
+                  ? 'Não há comandas abertas no momento. Use o formulário acima para informar o número e abrir uma comanda.'
                   : view === 'MESA_E_COMANDA'
                     ? 'Não há comandas abertas. Selecione um quadrado cinza ou use uma mesa ao lado para abrir uma comanda.'
                     : 'Não há comandas abertas. Selecione um quadrado cinza para abrir uma comanda.'}

@@ -132,6 +132,8 @@ export function useOrdersTablesApi() {
                 ? 'O servidor não confirmou a operação. Tente novamente para repetir a mesma solicitação.'
                 : response.status === 409 && comandaNumber
                   ? `A comanda ${comandaNumber} foi aberta em outra sessão. Atualize a tela.`
+                  : response.status === 422 && comandaNumber
+                    ? `O número ${comandaNumber} não está habilitado para este restaurante ou algum dado informado é inválido.`
                   : 'Não foi possível abrir a comanda. Confira a sessão e a mesa e tente novamente.',
           });
           return;

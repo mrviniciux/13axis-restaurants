@@ -12,8 +12,8 @@ import {
 import { useMemo, useState } from 'react';
 import { formatMoney } from '@/lib/format';
 import { useOrdersTables, useOrdersTablesActions } from '@/store';
-import { useOrdersTablesApi } from '@/hooks';
 import type { Order, Table } from '@/lib/types';
+import { StandaloneOrderForm } from '../standalone-order-form/standalone-order-form';
 
 export type LargeCardsFilter = 'ALL' | 'IN_SERVICE' | 'READY' | 'BILL_REQUESTED';
 export type LargeCardsSort =
@@ -298,17 +298,13 @@ export function LargeCardsView({
   canReceivePayments?: boolean;
   userId?: string;
 }>) {
-  const { selectedComandaOrderId, tableActions } = useOrdersTables((state) => ({
-    selectedComandaOrderId: state.selectedComandaOrderId,
-    tableActions: state.tableActions,
-  }));
-  const standaloneOrderAction = tableActions.standalone;
+  const selectedComandaOrderId = useOrdersTables((state) => state.selectedComandaOrderId);
   const actions = useOrdersTablesActions();
-  const api = useOrdersTablesApi();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<LargeCardsFilter>('ALL');
   const [sortBy, setSortBy] = useState<LargeCardsSort>('CUSTOM');
+  const [newOrderFormOpen, setNewOrderFormOpen] = useState(false);
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(
     selectedComandaOrderId ?? (orders[0]?.id ?? null),
@@ -466,14 +462,14 @@ export function LargeCardsView({
         </div>
         <button
           className="large-cards-new-order-btn"
-          disabled={standaloneOrderAction?.status === 'pending'}
-          onClick={() => void api.openOrder()}
+          onClick={() => setNewOrderFormOpen((open) => !open)}
           type="button"
         >
           <Plus aria-hidden="true" size={16} />
-          <span>Nova comanda</span>
+          <span>{newOrderFormOpen ? 'Cancelar' : 'Nova comanda'}</span>
         </button>
       </div>
+      {newOrderFormOpen ? <StandaloneOrderForm /> : null}
 
       {/* 3. Filtros por status e seletor de ordenação */}
       <div className="large-cards-filter-bar">

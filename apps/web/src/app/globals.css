@@ -1340,8 +1340,13 @@ h1 {
 .new-order-inputs {
   display: flex;
   align-items: flex-end;
+  flex-wrap: wrap;
   gap: 8px;
   grid-column: 1 / -1;
+}
+
+.new-order-number {
+  flex: 0 0 125px;
 }
 
 .new-order-input-label {
