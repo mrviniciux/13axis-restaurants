@@ -19,14 +19,14 @@ export function WorkspaceShell({ children }: Readonly<{ children: React.ReactNod
         Pular para o conteúdo principal
       </a>
       <div className={`app-shell${sidebarExpanded ? " app-shell-sidebar-expanded" : ""}`}>
-        <aside aria-label="Menu do Mudra" className="sidebar">
+        <aside aria-label="Menu do 13axis" className="sidebar">
           <div className="sidebar-brand-row">
-            <Link aria-label="Mudra, voltar à visão geral" className="brand" href="/">
+            <Link aria-label="13axis, voltar à visão geral" className="brand" href="/">
               <span aria-hidden="true" className="brand-mark">
                 M
               </span>
               <span className="brand-copy">
-                <span className="brand-name">mudra</span>
+                <span className="brand-name">13axis</span>
                 <span className="brand-caption">gestão para restaurantes</span>
               </span>
             </Link>

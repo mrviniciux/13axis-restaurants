@@ -46,14 +46,14 @@ Instale dependências e aplique as migrations:
 
 ```powershell
 pnpm install
-pnpm --filter @mudra/database db:migrate:deploy
+pnpm --filter @13axis/database db:migrate:deploy
 ```
 
 Crie o restaurante e o ADMIN. O comando pede nome, email, nome de exibição e
 senha; a senha não aparece enquanto é digitada:
 
 ```powershell
-pnpm --filter @mudra/database create-admin
+pnpm --filter @13axis/database create-admin
 ```
 
 Adicione 12 mesas para teste. Este comando só funciona com `NODE_ENV=development`,
@@ -61,7 +61,7 @@ recusa restaurantes que já tenham mesas ativas e não deve ser usado em produç
 
 ```powershell
 $env:NODE_ENV = "development"
-pnpm --filter @mudra/database seed:demo-tables
+pnpm --filter @13axis/database seed:demo-tables
 ```
 
 Crie categorias e produtos de demonstração para lançar nas comandas. O comando
@@ -69,7 +69,7 @@ também só funciona em desenvolvimento e recusa restaurantes que já tenham
 categorias ou produtos ativos:
 
 ```powershell
-pnpm --filter @mudra/database seed:demo-menu
+pnpm --filter @13axis/database seed:demo-menu
 ```
 
 Abra as comandas numeradas de demonstração **20 a 29**. O seed é idempotente:
@@ -78,13 +78,13 @@ abertos. Execute apenas contra o banco local de desenvolvimento:
 
 ```powershell
 $env:NODE_ENV = "development"
-pnpm --filter @mudra/database seed:demo-orders
+pnpm --filter @13axis/database seed:demo-orders
 ```
 
 Inicie somente o back-office web:
 
 ```powershell
-pnpm --filter @mudra/web dev
+pnpm --filter @13axis/web dev
 ```
 
 Abra **http://localhost:3000** no navegador e entre com o email e senha
@@ -212,7 +212,7 @@ escolhidos no `create-admin`. A sessão usa cookie seguro gerenciado pelo Auth.j
     válida no corpo `{ "comandaNumbers": "[{1-30}, 50]" }`; a resposta deve
     confirmar a lista salva.
 19. **Seed de comandas para testes:** com `NODE_ENV=development`, execute
-    `pnpm --filter @mudra/database seed:demo-orders` duas vezes. A primeira
+    `pnpm --filter @13axis/database seed:demo-orders` duas vezes. A primeira
     execução deve completar as comandas 20 a 29; a segunda não deve criar
     duplicatas. Confirme que o comando recusa execução com `NODE_ENV` diferente
     de `development`.
@@ -229,13 +229,13 @@ sincronização offline e KDS conectado ainda não fazem parte deste fluxo test�
 Na raiz, usando as mesmas dependências instaladas:
 
 ```powershell
-pnpm --filter @mudra/shared test
-pnpm --filter @mudra/database db:validate
-pnpm --filter @mudra/database typecheck
-pnpm --filter @mudra/web test
-pnpm --filter @mudra/web lint
-pnpm --filter @mudra/web typecheck
-pnpm --filter @mudra/web build
+pnpm --filter @13axis/shared test
+pnpm --filter @13axis/database db:validate
+pnpm --filter @13axis/database typecheck
+pnpm --filter @13axis/web test
+pnpm --filter @13axis/web lint
+pnpm --filter @13axis/web typecheck
+pnpm --filter @13axis/web build
 ```
 
 O typecheck/build da web exigem que o pacote compartilhado e o cliente Prisma
@@ -248,7 +248,7 @@ comandas, sem depender de renderização de componentes.
 
 ## Persistência e limpeza
 
-O volume Docker `mudra-postgres` preserva os dados entre reinicializações.
+O volume Docker `13axis-postgres` preserva os dados entre reinicializações.
 `docker compose stop` interrompe o banco sem apagar dados. Não remova volumes
 que contenham dados de que você precisa. Use um banco separado para qualquer
 teste destrutivo ou de migration/backfill.
@@ -264,18 +264,18 @@ Reset completo, removendo também o volume Docker:
 ```powershell
 docker compose down -v
 docker compose up -d --wait postgres
-pnpm --filter @mudra/database db:migrate:deploy
-pnpm --filter @mudra/database db:generate
-pnpm --filter @mudra/database create-admin
+pnpm --filter @13axis/database db:migrate:deploy
+pnpm --filter @13axis/database db:generate
+pnpm --filter @13axis/database create-admin
 ```
 
 Para recriar apenas o schema, mantendo o container e o volume:
 
 ```powershell
 docker compose up -d --wait postgres
-docker compose exec -T postgres psql -U mudra -d mudra -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
-pnpm --filter @mudra/database db:migrate:deploy
-pnpm --filter @mudra/database create-admin
+docker compose exec -T postgres psql -U 13axis -d 13axis -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+pnpm --filter @13axis/database db:migrate:deploy
+pnpm --filter @13axis/database create-admin
 ```
 
 Alternativa com Prisma, que apaga o schema, reaplica as migrations e regenera o
@@ -283,15 +283,15 @@ cliente:
 
 ```powershell
 docker compose up -d --wait postgres
-pnpm --filter @mudra/database exec prisma migrate reset --force --skip-seed
-pnpm --filter @mudra/database create-admin
+pnpm --filter @13axis/database exec prisma migrate reset --force --skip-seed
+pnpm --filter @13axis/database create-admin
 ```
 
 Depois de qualquer reset, os dados de demonstração precisam ser recarregados:
 
 ```powershell
 $env:NODE_ENV = "development"
-pnpm --filter @mudra/database seed:demo-tables
-pnpm --filter @mudra/database seed:demo-menu
-pnpm --filter @mudra/database seed:demo-orders
+pnpm --filter @13axis/database seed:demo-tables
+pnpm --filter @13axis/database seed:demo-menu
+pnpm --filter @13axis/database seed:demo-orders
 ```

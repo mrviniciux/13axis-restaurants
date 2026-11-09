@@ -19,12 +19,12 @@ WORKDIR /repo
 # Contexto completo do monorepo para o install respeitar o pnpm-lock.yaml.
 COPY . .
 
-# Dependências do realtime e do @mudra/shared (sem Next.js/Prisma).
-RUN --mount=type=cache,id=mudra-pnpm-store,target=/pnpm/store \
-    pnpm install --frozen-lockfile --filter @mudra/realtime... --store-dir /pnpm/store
+# Dependências do realtime e do @13axis/shared (sem Next.js/Prisma).
+RUN --mount=type=cache,id=13axis-pnpm-store,target=/pnpm/store \
+    pnpm install --frozen-lockfile --filter @13axis/realtime... --store-dir /pnpm/store
 
 # Compila TypeScript para dist/ (tsc); dependências do workspace primeiro.
-RUN pnpm --filter @mudra/realtime... build
+RUN pnpm --filter @13axis/realtime... build
 
 # ---------------------------------------------------------------------------
 FROM node:22-slim AS runner

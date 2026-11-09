@@ -1,4 +1,4 @@
-# Mudra for Restaurants — Especificação Técnica
+# 13axis for Restaurants — Especificação Técnica
 
 > Sistema de gestão para restaurante único (sem franquias nesta fase), com back-office web (gerente/admin) e app nativo Android para pista de atendimento (garçom/balança), ambos offline-first com sincronização em tempo real.
 
@@ -64,7 +64,7 @@ Sistema completo de gestão de restaurante com dois front-ends distintos:
 ### 2.2 Estrutura do Monorepo
 
 ```
-mudra-for-restaurants/
+13axis-for-restaurants/
 ├── apps/
 │   ├── web/              # Next.js 16 (App Router) + shadcn/ui — back-office desktop
 │   ├── mobile/           # Expo + React Native — app nativo Android (garçom/balança)
@@ -216,7 +216,7 @@ KITCHEN   → visualizar pedidos, atualizar status de itens
   principal, sem abrir uma lista de detalhes separada.
 - Ao abrir uma comanda, abrir também o formulário rápido de produto com foco na
   busca. A busca prioriza Buffet Livre, Buffet por KG, Coca-cola zero lata
-  300ml, Suco Mudra e Suco de laranja; o usuário pode pesquisar outros produtos.
+  300ml, Suco 13axis e Suco de laranja; o usuário pode pesquisar outros produtos.
 - A inclusão de item pede produto e quantidade; observação é opcional.
   Quantidade aceita vírgula decimal (por exemplo, `0,340`) e é normalizada para
   ponto no armazenamento.

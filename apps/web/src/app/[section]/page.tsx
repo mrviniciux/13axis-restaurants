@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { redirect } from 'next/navigation';
-import { hasPermission } from '@mudra/shared';
+import { hasPermission } from '@13axis/shared';
 import { auth } from '@/auth';
 import { OrdersTablesPanel } from '@/components/orders-tables-panel';
 import { MenuCatalogManager } from '@/components/menu-catalog-manager';

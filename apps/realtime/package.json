@@ -1,5 +1,5 @@
 {
-  "name": "@mudra/realtime",
+  "name": "@13axis/realtime",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -14,7 +14,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@mudra/shared": "workspace:*",
+    "@13axis/shared": "workspace:*",
     "@socket.io/redis-adapter": "^8.3.0",
     "jose": "^6.2.15",
     "redis": "^5.12.1",

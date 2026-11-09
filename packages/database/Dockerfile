@@ -4,7 +4,7 @@
 # Imagem de ferramentas: migrações e CLIs do Prisma (create-admin, seeds).
 # Não é um serviço de longa duração; executa sob demanda:
 #   docker compose --profile migrate run --rm migrate
-#   docker compose --profile migrate run --rm migrate pnpm --filter @mudra/database create-admin
+#   docker compose --profile migrate run --rm migrate pnpm --filter @13axis/database create-admin
 # O build context é a RAIZ do monorepo.
 # ---------------------------------------------------------------------------
 FROM node:22-slim
@@ -27,7 +27,7 @@ COPY . .
 
 # Inclui devDependencies (Prisma CLI e TypeScript) — necessários para
 # `prisma migrate deploy`, `create-admin` e os seeds.
-RUN --mount=type=cache,id=mudra-pnpm-store,target=/pnpm/store \
-    pnpm install --frozen-lockfile --filter @mudra/database... --store-dir /pnpm/store
+RUN --mount=type=cache,id=13axis-pnpm-store,target=/pnpm/store \
+    pnpm install --frozen-lockfile --filter @13axis/database... --store-dir /pnpm/store
 
-CMD ["pnpm", "--filter", "@mudra/database", "db:migrate:deploy"]
+CMD ["pnpm", "--filter", "@13axis/database", "db:migrate:deploy"]

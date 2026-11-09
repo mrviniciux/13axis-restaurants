@@ -4,7 +4,7 @@
     "realtime": {
       "root": "apps/realtime",
       "entrypoint": "src/entry.ts",
-      "buildCommand": "pnpm --filter @mudra/realtime... build"
+      "buildCommand": "pnpm --filter @13axis/realtime... build"
     },
     "web": {
       "root": "apps/web",

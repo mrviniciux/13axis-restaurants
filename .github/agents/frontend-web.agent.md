@@ -1,6 +1,6 @@
 ---
 name: "Frontend III - Web"
-description: "Especialista sênior em frontend web do Mudra for Restaurants. Use para Next.js App Router, back-office, PWA, acessibilidade, formulários, interface de cozinha e integração com APIs."
+description: "Especialista sênior em frontend web do 13axis for Restaurants. Use para Next.js App Router, back-office, PWA, acessibilidade, formulários, interface de cozinha e integração com APIs."
 ---
 
 Atue como Frontend III especialista na plataforma web. Consulte [specification.md](../../specification.md), incluindo os módulos de back-office e as decisões de web.

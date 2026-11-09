@@ -1,10 +1,12 @@
-import { createId } from "@mudra/shared";
+import { createId } from "@13axis/shared";
 import { PrismaClient } from "@prisma/client";
 import { stderr, stdout } from "node:process";
 
 class SetupError extends Error {}
 
-function requiredEnvironmentVariable(name: "DATABASE_URL" | "NODE_ENV"): string {
+function requiredEnvironmentVariable(
+  name: "DATABASE_URL" | "NODE_ENV",
+): string {
   const value = process.env[name]?.trim();
   if (!value) {
     throw new SetupError(`Defina ${name} antes de executar esta tarefa.`);
@@ -28,7 +30,11 @@ const demoMenu: readonly DemoMenuGroup[] = [
     category: "Buffet",
     items: [
       { name: "Buffet Livre", price: "64.90" },
-      { name: "Buffet por KG", price: "94.90", description: "Preço por quilograma" },
+      {
+        name: "Buffet por KG",
+        price: "94.90",
+        description: "Preço por quilograma",
+      },
     ],
   },
   {
@@ -65,7 +71,9 @@ async function main(): Promise<void> {
   try {
     requiredEnvironmentVariable("DATABASE_URL");
     if (requiredEnvironmentVariable("NODE_ENV") !== "development") {
-      throw new SetupError("Os dados de demonstração só podem ser criados em NODE_ENV=development.");
+      throw new SetupError(
+        "Os dados de demonstração só podem ser criados em NODE_ENV=development.",
+      );
     }
 
     prisma = new PrismaClient();
@@ -74,7 +82,9 @@ async function main(): Promise<void> {
       select: { id: true },
     });
     if (!restaurant) {
-      throw new SetupError("Inicialize o restaurante e o administrador antes de criar o cardápio.");
+      throw new SetupError(
+        "Inicialize o restaurante e o administrador antes de criar o cardápio.",
+      );
     }
 
     const [activeCategories, activeItems] = await Promise.all([
@@ -117,7 +127,10 @@ async function main(): Promise<void> {
       }
     });
 
-    const totalItems = demoMenu.reduce((count, group) => count + group.items.length, 0);
+    const totalItems = demoMenu.reduce(
+      (count, group) => count + group.items.length,
+      0,
+    );
     stdout.write(
       `Cardápio de demonstração criado: ${demoMenu.length} categorias e ${totalItems} produtos.\n`,
     );
@@ -125,7 +138,9 @@ async function main(): Promise<void> {
     if (error instanceof SetupError) {
       stderr.write(`${error.message}\n`);
     } else {
-      stderr.write("Não foi possível criar o cardápio de demonstração. Verifique a conexão e o banco.\n");
+      stderr.write(
+        "Não foi possível criar o cardápio de demonstração. Verifique a conexão e o banco.\n",
+      );
     }
     process.exitCode = 1;
   } finally {

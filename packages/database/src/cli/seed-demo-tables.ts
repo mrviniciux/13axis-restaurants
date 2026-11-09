@@ -1,10 +1,12 @@
-import { createId } from "@mudra/shared";
+import { createId } from "@13axis/shared";
 import { PrismaClient } from "@prisma/client";
 import { stderr, stdout } from "node:process";
 
 class SetupError extends Error {}
 
-function requiredEnvironmentVariable(name: "DATABASE_URL" | "NODE_ENV"): string {
+function requiredEnvironmentVariable(
+  name: "DATABASE_URL" | "NODE_ENV",
+): string {
   const value = process.env[name]?.trim();
   if (!value) {
     throw new SetupError(`Defina ${name} antes de executar esta tarefa.`);
@@ -18,7 +20,9 @@ async function main(): Promise<void> {
   try {
     requiredEnvironmentVariable("DATABASE_URL");
     if (requiredEnvironmentVariable("NODE_ENV") !== "development") {
-      throw new SetupError("Os dados de demonstração só podem ser criados em NODE_ENV=development.");
+      throw new SetupError(
+        "Os dados de demonstração só podem ser criados em NODE_ENV=development.",
+      );
     }
 
     const database = new PrismaClient();
@@ -28,7 +32,9 @@ async function main(): Promise<void> {
       select: { id: true },
     });
     if (!restaurant) {
-      throw new SetupError("Inicialize o restaurante e o administrador antes de criar mesas.");
+      throw new SetupError(
+        "Inicialize o restaurante e o administrador antes de criar mesas.",
+      );
     }
 
     const existingTables = await database.table.count({
@@ -54,12 +60,16 @@ async function main(): Promise<void> {
       ),
     );
 
-    stdout.write(`Criadas ${capacities.length} mesas de demonstração no restaurante ${restaurant.id}.\n`);
+    stdout.write(
+      `Criadas ${capacities.length} mesas de demonstração no restaurante ${restaurant.id}.\n`,
+    );
   } catch (error) {
     if (error instanceof SetupError) {
       stderr.write(`${error.message}\n`);
     } else {
-      stderr.write("Não foi possível criar as mesas de demonstração. Verifique a conexão e o banco.\n");
+      stderr.write(
+        "Não foi possível criar as mesas de demonstração. Verifique a conexão e o banco.\n",
+      );
     }
     process.exitCode = 1;
   } finally {

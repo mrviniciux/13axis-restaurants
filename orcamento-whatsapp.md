@@ -1,4 +1,4 @@
-# Estimativa — Mudra for Restaurants
+# Estimativa — 13axis for Restaurants
 
 Dois blocos: um com a estimativa para equipe de IA (enviar), outro com a
 estimativa original de horas humanas (referência interna).
@@ -8,7 +8,7 @@ estimativa original de horas humanas (referência interna).
 ## BLOCO 1 — Para WhatsApp (equipe de IA)
 
 ```
-ESTIMATIVA — Mudra for Restaurants (equipe de IA)
+ESTIMATIVA — 13axis for Restaurants (equipe de IA)
 Data: 08/11/2026
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
@@ -121,14 +121,14 @@ Faixa: 380h a 460h
 A IA não elimina horas — ela comprime o **tempo de execução** mas não reduz
 o **tempo de decisão**. Em termos práticos:
 
-| O que a IA faz rápido | O que ainda exige humano |
-|---|---|
+| O que a IA faz rápido                       | O que ainda exige humano                               |
+| ------------------------------------------- | ------------------------------------------------------ |
 | Escrever código de CRUD, rotas, componentes | Definir regras de negócio ("o que acontece quando...") |
-| Criar testes unitários | Testar no device real (tablet do restaurante) |
-| Refatorar e corrigir bugs comuns | Validar UX com o usuário final |
-| Gerar CSS, estilos, layout | Decisões de produto (prioridade de funcionalidades) |
-| Documentar | Revisar e aprovar cada entrega |
-| Migrations e schemas | Definir o modelo de dados do negócio |
+| Criar testes unitários                      | Testar no device real (tablet do restaurante)          |
+| Refatorar e corrigir bugs comuns            | Validar UX com o usuário final                         |
+| Gerar CSS, estilos, layout                  | Decisões de produto (prioridade de funcionalidades)    |
+| Documentar                                  | Revisar e aprovar cada entrega                         |
+| Migrations e schemas                        | Definir o modelo de dados do negócio                   |
 
 O risco principal não é velocidade — é **contexto perdido**. Uma sessão de IA
 por dia exige que você releia o que foi feito antes de continuar. Isso é
@@ -146,6 +146,7 @@ Projetando para as 418h restantes com o mesmo fator: **~140–170h de calendári
 ### Sobre o módulo de IA especificamente (35h equivalentes / ~1–2 semanas)
 
 É o módulo com maior incerteza porque depende de:
+
 1. Qualidade do prompt engineering para extrair estrutura de PDFs escaneados
 2. Comportamento do Claude em arquivos com dados sujos
 3. UI de preview (validação interativa antes de confirmar inserção)

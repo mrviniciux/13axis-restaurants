@@ -28,10 +28,10 @@ WORKDIR /repo
 COPY . .
 
 # Instala as dependências do web e dos pacotes do workspace
-# (@mudra/shared e @mudra/database). O store fica em cache mount para
+# (@13axis/shared e @13axis/database). O store fica em cache mount para
 # reutilizar os downloads entre builds.
-RUN --mount=type=cache,id=mudra-pnpm-store,target=/pnpm/store \
-    pnpm install --frozen-lockfile --filter @mudra/web... --store-dir /pnpm/store
+RUN --mount=type=cache,id=13axis-pnpm-store,target=/pnpm/store \
+    pnpm install --frozen-lockfile --filter @13axis/web... --store-dir /pnpm/store
 
 # Placeholders apenas para o build (mesma abordagem da CI): o Prisma Client
 # precisa de DATABASE_URL válido para gerar, e o prerender das páginas
@@ -46,7 +46,7 @@ ENV AUTH_SECRET="build-only-placeholder-not-used-at-runtime"
 ARG NEXT_PUBLIC_REALTIME_URL=http://localhost:3001
 ENV NEXT_PUBLIC_REALTIME_URL=$NEXT_PUBLIC_REALTIME_URL
 
-RUN pnpm --filter @mudra/web... build
+RUN pnpm --filter @13axis/web... build
 
 # ---------------------------------------------------------------------------
 FROM node:22-slim AS runner

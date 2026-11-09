@@ -4,11 +4,11 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Mudra | Gestão do restaurante",
-    template: "%s | Mudra",
+    default: "13axis | Gestão do restaurante",
+    template: "%s | 13axis",
   },
-  description: "Back-office e Kitchen Display do Mudra for Restaurants.",
-  applicationName: "Mudra for Restaurants",
+  description: "Back-office e Kitchen Display do 13axis for Restaurants.",
+  applicationName: "13axis for Restaurants",
 };
 
 export default function RootLayout({

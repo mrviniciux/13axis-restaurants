@@ -1,4 +1,4 @@
-import { createId } from "@mudra/shared";
+import { createId } from "@13axis/shared";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { stderr, stdout } from "node:process";
 
@@ -7,7 +7,9 @@ const DEMO_ORDER_LOCK_NAMESPACE = 1297439826;
 
 class SetupError extends Error {}
 
-function requiredEnvironmentVariable(name: "DATABASE_URL" | "NODE_ENV"): string {
+function requiredEnvironmentVariable(
+  name: "DATABASE_URL" | "NODE_ENV",
+): string {
   const value = process.env[name]?.trim();
   if (!value) {
     throw new SetupError(`Defina ${name} antes de executar esta tarefa.`);
@@ -102,7 +104,9 @@ async function main(): Promise<void> {
   try {
     requiredEnvironmentVariable("DATABASE_URL");
     if (requiredEnvironmentVariable("NODE_ENV") !== "development") {
-      throw new SetupError("As comandas de demonstração só podem ser criadas em NODE_ENV=development.");
+      throw new SetupError(
+        "As comandas de demonstração só podem ser criadas em NODE_ENV=development.",
+      );
     }
 
     prisma = new PrismaClient();
@@ -111,7 +115,9 @@ async function main(): Promise<void> {
       select: { id: true },
     });
     if (!restaurant) {
-      throw new SetupError("Inicialize o restaurante e o administrador antes de criar comandas.");
+      throw new SetupError(
+        "Inicialize o restaurante e o administrador antes de criar comandas.",
+      );
     }
 
     // Build a lookup of menu items by name so we can attach items to orders
@@ -148,7 +154,9 @@ async function main(): Promise<void> {
       );
 
       for (const comandaNumber of missingNumbers) {
-        const preset = demoOrderPresets.find((p) => p.comandaNumber === comandaNumber);
+        const preset = demoOrderPresets.find(
+          (p) => p.comandaNumber === comandaNumber,
+        );
         const orderItems = (preset?.items ?? []).flatMap((entry) => {
           const mi = menuItemByName.get(entry.menuItemName);
           if (!mi) return [];
@@ -157,7 +165,12 @@ async function main(): Promise<void> {
 
         const total = orderItems
           .reduce(
-            (sum, oi) => sum.add(new Prisma.Decimal(oi.quantity).mul(new Prisma.Decimal(oi.unitPrice.toString()))),
+            (sum, oi) =>
+              sum.add(
+                new Prisma.Decimal(oi.quantity).mul(
+                  new Prisma.Decimal(oi.unitPrice.toString()),
+                ),
+              ),
             new Prisma.Decimal(0),
           )
           .toFixed(2);

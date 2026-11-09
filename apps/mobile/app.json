@@ -1,14 +1,14 @@
 {
   "expo": {
-    "name": "Mudra",
-    "slug": "mudra-mobile",
-    "scheme": "mudra",
+    "name": "13axis",
+    "slug": "13axis-mobile",
+    "scheme": "13axis",
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "android": {
-      "package": "com.mudra.restaurants",
+      "package": "com.13axis.restaurants",
       "edgeToEdgeEnabled": true
     },
     "plugins": [

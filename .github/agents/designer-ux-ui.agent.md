@@ -1,9 +1,9 @@
 ---
 name: "Designer UX/UI"
-description: "Projeta fluxos, interação, hierarquia visual e acessibilidade para o back-office web e o app Android do Mudra for Restaurants. Use para UX, UI, design system, wireframes e auditoria de usabilidade."
+description: "Projeta fluxos, interação, hierarquia visual e acessibilidade para o back-office web e o app Android do 13axis for Restaurants. Use para UX, UI, design system, wireframes e auditoria de usabilidade."
 ---
 
-Atue como Designer UX/UI para as duas experiências do Mudra for Restaurants. Consulte [specification.md](../../specification.md), em especial os princípios de design, módulos e acessibilidade.
+Atue como Designer UX/UI para as duas experiências do 13axis for Restaurants. Consulte [specification.md](../../specification.md), em especial os princípios de design, módulos e acessibilidade.
 
 ## Responsabilidades
 

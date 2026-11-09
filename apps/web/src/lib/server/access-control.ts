@@ -1,5 +1,11 @@
-import { hasPermission, RoleSchema, UuidV7Schema, type Permission, type Role } from '@mudra/shared';
-import { ApiProblemError } from './problem';
+import {
+  hasPermission,
+  RoleSchema,
+  UuidV7Schema,
+  type Permission,
+  type Role,
+} from "@13axis/shared";
+import { ApiProblemError } from "./problem";
 
 /** Server-trusted principal; callers must derive it from a verified session. */
 export type AuthenticatedServerContext = Readonly<{
@@ -8,13 +14,19 @@ export type AuthenticatedServerContext = Readonly<{
   role: Role;
 }>;
 
-export function requireAuthenticatedContext(context: unknown): AuthenticatedServerContext {
-  if (context === null || typeof context !== 'object' || Array.isArray(context)) {
+export function requireAuthenticatedContext(
+  context: unknown,
+): AuthenticatedServerContext {
+  if (
+    context === null ||
+    typeof context !== "object" ||
+    Array.isArray(context)
+  ) {
     throw new ApiProblemError(
       401,
-      'UNAUTHENTICATED',
-      'Autenticação necessária',
-      'É necessária uma sessão autenticada válida.',
+      "UNAUTHENTICATED",
+      "Autenticação necessária",
+      "É necessária uma sessão autenticada válida.",
     );
   }
 
@@ -25,13 +37,17 @@ export function requireAuthenticatedContext(context: unknown): AuthenticatedServ
   if (!userId.success || !restaurantId.success || !role.success) {
     throw new ApiProblemError(
       401,
-      'UNAUTHENTICATED',
-      'Autenticação necessária',
-      'É necessária uma sessão autenticada válida.',
+      "UNAUTHENTICATED",
+      "Autenticação necessária",
+      "É necessária uma sessão autenticada válida.",
     );
   }
 
-  return { userId: userId.data, restaurantId: restaurantId.data, role: role.data };
+  return {
+    userId: userId.data,
+    restaurantId: restaurantId.data,
+    role: role.data,
+  };
 }
 
 export function requirePermission(
@@ -42,23 +58,25 @@ export function requirePermission(
   if (!hasPermission(authenticated.role, permission)) {
     throw new ApiProblemError(
       403,
-      'FORBIDDEN',
-      'Acesso negado',
-      'O perfil autenticado não tem permissão para esta ação.',
+      "FORBIDDEN",
+      "Acesso negado",
+      "O perfil autenticado não tem permissão para esta ação.",
     );
   }
   return authenticated;
 }
 
 /** Operational table/order list access remains ADMIN/WAITER only. */
-export function requireOperationalReadAccess(context: unknown): AuthenticatedServerContext {
+export function requireOperationalReadAccess(
+  context: unknown,
+): AuthenticatedServerContext {
   const authenticated = requireAuthenticatedContext(context);
-  if (authenticated.role !== 'ADMIN' && authenticated.role !== 'WAITER') {
+  if (authenticated.role !== "ADMIN" && authenticated.role !== "WAITER") {
     throw new ApiProblemError(
       403,
-      'FORBIDDEN',
-      'Acesso negado',
-      'O perfil autenticado não tem permissão para esta consulta.',
+      "FORBIDDEN",
+      "Acesso negado",
+      "O perfil autenticado não tem permissão para esta consulta.",
     );
   }
   return authenticated;

@@ -1,5 +1,5 @@
 import * as argon2 from "argon2";
-import { createId } from "@mudra/shared";
+import { createId } from "@13axis/shared";
 import { PrismaClient, type Prisma } from "@prisma/client";
 import { stdin, stderr, stdout } from "node:process";
 import { createInterface } from "node:readline/promises";
@@ -52,7 +52,9 @@ async function promptVisibleFields(): Promise<{
 /** Reads the password directly from a TTY in raw mode; typed characters are never echoed. */
 async function promptHidden(prompt: string): Promise<string> {
   if (!stdin.isTTY || !stdout.isTTY || typeof stdin.setRawMode !== "function") {
-    throw new CliError("A senha deve ser informada em um terminal interativo (TTY).");
+    throw new CliError(
+      "A senha deve ser informada em um terminal interativo (TTY).",
+    );
   }
 
   return new Promise<string>((resolve, reject) => {
@@ -96,12 +98,15 @@ async function promptHidden(prompt: string): Promise<string> {
   });
 }
 
-async function createBootstrap(prisma: PrismaClient, data: {
-  restaurantName: string;
-  email: string;
-  displayName: string;
-  passwordHash: string;
-}): Promise<{ restaurantId: string; adminId: string }> {
+async function createBootstrap(
+  prisma: PrismaClient,
+  data: {
+    restaurantName: string;
+    email: string;
+    displayName: string;
+    passwordHash: string;
+  },
+): Promise<{ restaurantId: string; adminId: string }> {
   return prisma.$transaction(async (transaction: Prisma.TransactionClient) => {
     // Serialize bootstrap attempts, including concurrent CLI processes.
     await transaction.$queryRaw`
@@ -145,13 +150,17 @@ async function main(): Promise<void> {
     const { restaurantName, email, displayName } = await promptVisibleFields();
 
     if (!restaurantName || !email || !displayName) {
-      throw new CliError("Nome do restaurante, email e nome de exibição são obrigatórios.");
+      throw new CliError(
+        "Nome do restaurante, email e nome de exibição são obrigatórios.",
+      );
     }
     if (!email.includes("@") || /\s/.test(email)) {
       throw new CliError("Informe um email válido.");
     }
 
-    const password = await promptHidden("Senha do administrador (entrada oculta): ");
+    const password = await promptHidden(
+      "Senha do administrador (entrada oculta): ",
+    );
     if (!password) throw new CliError("A senha não pode ficar vazia.");
 
     // argon2 creates a cryptographically random salt and stores it in the
@@ -173,7 +182,9 @@ async function main(): Promise<void> {
     );
   } catch (error) {
     if (error instanceof BootstrapAlreadyCompletedError) {
-      stderr.write("Bootstrap recusado: já existe um restaurante neste banco de dados.\n");
+      stderr.write(
+        "Bootstrap recusado: já existe um restaurante neste banco de dados.\n",
+      );
     } else if (error instanceof CliError) {
       stderr.write(`${error.message}\n`);
     } else {

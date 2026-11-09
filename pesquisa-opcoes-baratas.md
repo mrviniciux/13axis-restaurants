@@ -1,4 +1,4 @@
-# Pesquisa de opções mais baratas de hospedagem — Mudra for Restaurants
+# Pesquisa de opções mais baratas de hospedagem — 13axis for Restaurants
 
 **Data da pesquisa:** 06/11/2026
 **Objetivo:** encontrar alternativas com custo menor que o cenário atual do [`orçamento.md`](orçamento.md)

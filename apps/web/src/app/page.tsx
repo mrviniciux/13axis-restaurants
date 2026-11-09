@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { formatCurrency } from '@/lib/format';
-import { hasPermission } from '@mudra/shared';
+import { hasPermission } from '@13axis/shared';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { getAuthenticatedServerContext } from '@/lib/server/auth';

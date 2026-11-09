@@ -1,31 +1,33 @@
-'use client';
+"use client";
 
-import { createId } from '@mudra/shared';
-import { useRouter } from 'next/navigation';
-import { useMemo } from 'react';
-import { useOrdersTablesStoreApi } from '../store';
-import type { MenuItem, OrderItem, ProductCreateTarget } from '../lib/types';
-import type { TablesComandasView } from '@/lib/server/tables-comandas-view';
+import { createId } from "@13axis/shared";
+import { useRouter } from "next/navigation";
+import { useMemo } from "react";
+import { useOrdersTablesStoreApi } from "../store";
+import type { MenuItem, OrderItem, ProductCreateTarget } from "../lib/types";
+import type { TablesComandasView } from "@/lib/server/tables-comandas-view";
 
 function readServerMessage(result: unknown, fallback: string) {
-  if (result === null || typeof result !== 'object') return fallback;
-  if ('detail' in result && typeof result.detail === 'string') return result.detail;
-  if ('message' in result && typeof result.message === 'string') return result.message;
+  if (result === null || typeof result !== "object") return fallback;
+  if ("detail" in result && typeof result.detail === "string")
+    return result.detail;
+  if ("message" in result && typeof result.message === "string")
+    return result.message;
   return fallback;
 }
 
 function isMenuItem(value: unknown): value is MenuItem {
   return (
     value !== null &&
-    typeof value === 'object' &&
-    'id' in value &&
-    typeof value.id === 'string' &&
-    'name' in value &&
-    typeof value.name === 'string' &&
-    'category' in value &&
-    typeof value.category === 'string' &&
-    'price' in value &&
-    typeof value.price === 'string'
+    typeof value === "object" &&
+    "id" in value &&
+    typeof value.id === "string" &&
+    "name" in value &&
+    typeof value.name === "string" &&
+    "category" in value &&
+    typeof value.category === "string" &&
+    "price" in value &&
+    typeof value.price === "string"
   );
 }
 
@@ -36,88 +38,101 @@ export function useOrdersTablesApi() {
   return useMemo(() => {
     async function saveViewPreference(nextView: TablesComandasView) {
       const state = store.getState();
-      if (nextView === state.view || state.preferenceStatus === 'saving') return;
-      state.actions.setPreferenceStatus('saving');
+      if (nextView === state.view || state.preferenceStatus === "saving")
+        return;
+      state.actions.setPreferenceStatus("saving");
       try {
-        const response = await fetch('/api/preferences/tables-comandas-view', {
-          method: 'PATCH',
-          headers: { 'content-type': 'application/json' },
+        const response = await fetch("/api/preferences/tables-comandas-view", {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
           body: JSON.stringify({ view: nextView }),
         });
         if (!response.ok) {
-          store.getState().actions.setPreferenceStatus('error');
+          store.getState().actions.setPreferenceStatus("error");
           return;
         }
         store.getState().actions.setView(nextView);
-        store.getState().actions.setPreferenceStatus('saved');
+        store.getState().actions.setPreferenceStatus("saved");
         router.refresh();
       } catch {
-        store.getState().actions.setPreferenceStatus('error');
+        store.getState().actions.setPreferenceStatus("error");
       }
     }
 
     async function saveComandaNumbers() {
       const state = store.getState();
-      if (state.comandaNumbersStatus === 'saving') return;
-      state.actions.setComandaNumbersStatus('saving');
+      if (state.comandaNumbersStatus === "saving") return;
+      state.actions.setComandaNumbersStatus("saving");
       try {
-        const response = await fetch('/api/preferences/comanda-numbers', {
-          method: 'PATCH',
-          headers: { 'content-type': 'application/json' },
+        const response = await fetch("/api/preferences/comanda-numbers", {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
           body: JSON.stringify({ comandaNumbers: state.comandaNumbers }),
         });
         if (!response.ok) {
           const problem: unknown = await response.json().catch(() => null);
           const validationMessage =
             problem !== null &&
-            typeof problem === 'object' &&
-            'errors' in problem &&
+            typeof problem === "object" &&
+            "errors" in problem &&
             Array.isArray(problem.errors) &&
-            typeof problem.errors[0]?.message === 'string'
+            typeof problem.errors[0]?.message === "string"
               ? problem.errors[0].message
               : null;
-          store.getState().actions.setComandaNumbersStatus('error');
+          store.getState().actions.setComandaNumbersStatus("error");
           store
             .getState()
             .actions.setComandaNumbersError(
-              validationMessage ?? 'Não foi possível salvar. Revise os números e tente novamente.',
+              validationMessage ??
+                "Não foi possível salvar. Revise os números e tente novamente.",
             );
           return;
         }
-        store.getState().actions.setComandaNumbersError('');
-        store.getState().actions.setComandaNumbersStatus('saved');
+        store.getState().actions.setComandaNumbersError("");
+        store.getState().actions.setComandaNumbersStatus("saved");
         store.getState().actions.setComandaPage(0);
         router.refresh();
       } catch {
-        store.getState().actions.setComandaNumbersStatus('error');
+        store.getState().actions.setComandaNumbersStatus("error");
         store
           .getState()
-          .actions.setComandaNumbersError('Falha de conexão ao salvar. Tente novamente.');
+          .actions.setComandaNumbersError(
+            "Falha de conexão ao salvar. Tente novamente.",
+          );
       }
     }
 
-    async function openOrder(tableId?: string, comandaNumber?: number, customerName?: string, peopleCount?: number) {
+    async function openOrder(
+      tableId?: string,
+      comandaNumber?: number,
+      customerName?: string,
+      peopleCount?: number,
+    ) {
       const state = store.getState();
-      const actionKey = comandaNumber ? `comanda-${comandaNumber}` : (tableId ?? 'standalone');
+      const actionKey = comandaNumber
+        ? `comanda-${comandaNumber}`
+        : (tableId ?? "standalone");
       const current = state.tableActions[actionKey];
-      if (current?.status === 'pending') return;
-      const id = current?.status === 'error' ? current.id : createId();
+      if (current?.status === "pending") return;
+      const id = current?.status === "error" ? current.id : createId();
 
       state.actions.setTableAction(actionKey, {
         id,
-        status: 'pending',
-        message: 'Abrindo comanda…',
+        status: "pending",
+        message: "Abrindo comanda…",
       });
 
       try {
-        const response = await fetch('/api/orders', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
+        const response = await fetch("/api/orders", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
           body: JSON.stringify({
             id,
             ...(tableId ? { tableId } : {}),
             ...(comandaNumber ? { comandaNumber } : {}),
-            ...(customerName?.trim() ? { customerName: customerName.trim() } : {}),
+            ...(customerName?.trim()
+              ? { customerName: customerName.trim() }
+              : {}),
             ...(peopleCount && peopleCount > 0 ? { peopleCount } : {}),
             deviceId: null,
           }),
@@ -126,15 +141,15 @@ export function useOrdersTablesApi() {
         if (!response.ok) {
           store.getState().actions.setTableAction(actionKey, {
             id,
-            status: 'error',
+            status: "error",
             message:
               response.status >= 500
-                ? 'O servidor não confirmou a operação. Tente novamente para repetir a mesma solicitação.'
+                ? "O servidor não confirmou a operação. Tente novamente para repetir a mesma solicitação."
                 : response.status === 409 && comandaNumber
                   ? `A comanda ${comandaNumber} foi aberta em outra sessão. Atualize a tela.`
                   : response.status === 422 && comandaNumber
                     ? `O número ${comandaNumber} não está habilitado para este restaurante ou algum dado informado é inválido.`
-                  : 'Não foi possível abrir a comanda. Confira a sessão e a mesa e tente novamente.',
+                    : "Não foi possível abrir a comanda. Confira a sessão e a mesa e tente novamente.",
           });
           return;
         }
@@ -145,26 +160,26 @@ export function useOrdersTablesApi() {
         } catch {
           store.getState().actions.setTableAction(actionKey, {
             id,
-            status: 'error',
+            status: "error",
             message:
-              'A resposta da abertura não pôde ser lida. Atualize a tela; uma nova tentativa repetirá a mesma solicitação com segurança.',
+              "A resposta da abertura não pôde ser lida. Atualize a tela; uma nova tentativa repetirá a mesma solicitação com segurança.",
           });
           return;
         }
 
         const openedOrderId =
           result !== null &&
-          typeof result === 'object' &&
-          'id' in result &&
-          typeof result.id === 'string'
+          typeof result === "object" &&
+          "id" in result &&
+          typeof result.id === "string"
             ? result.id
             : null;
         if (!openedOrderId) {
           store.getState().actions.setTableAction(actionKey, {
             id,
-            status: 'error',
+            status: "error",
             message:
-              'A resposta do servidor não confirmou qual comanda foi aberta. Atualize a tela.',
+              "A resposta do servidor não confirmou qual comanda foi aberta. Atualize a tela.",
           });
           return;
         }
@@ -172,13 +187,16 @@ export function useOrdersTablesApi() {
         const replayed = response.status === 200;
         store.getState().actions.setTableAction(actionKey, {
           id,
-          status: replayed ? 'replayed' : 'created',
+          status: replayed ? "replayed" : "created",
           message: replayed
-            ? 'Solicitação repetida reconhecida: esta comanda já havia sido aberta.'
-            : 'Comanda aberta com sucesso.',
+            ? "Solicitação repetida reconhecida: esta comanda já havia sido aberta."
+            : "Comanda aberta com sucesso.",
         });
         store.getState().actions.clearPendingComanda();
-        if (comandaNumber !== undefined && store.getState().comandasTab === 'MAP_WITH_DETAILS') {
+        if (
+          comandaNumber !== undefined &&
+          store.getState().comandasTab === "MAP_WITH_DETAILS"
+        ) {
           store.getState().actions.selectComandaOrder(openedOrderId);
         } else {
           store.getState().actions.setQuickAddOpen(openedOrderId, true);
@@ -188,9 +206,9 @@ export function useOrdersTablesApi() {
       } catch {
         store.getState().actions.setTableAction(actionKey, {
           id,
-          status: 'error',
+          status: "error",
           message:
-            'Não foi possível confirmar a conexão. Tente novamente para repetir a mesma solicitação com segurança.',
+            "Não foi possível confirmar a conexão. Tente novamente para repetir a mesma solicitação com segurança.",
         });
       }
     }
@@ -199,84 +217,94 @@ export function useOrdersTablesApi() {
       const state = store.getState();
       const actionKey = `comanda-${orderId}`;
       const current = state.tableActions[actionKey];
-      if (current?.status === 'pending') return;
+      if (current?.status === "pending") return;
 
       state.actions.setTableAction(actionKey, {
         id: createId(),
-        status: 'pending',
-        message: 'Fechando comanda…',
+        status: "pending",
+        message: "Fechando comanda…",
       });
 
       try {
         const response = await fetch(`/api/orders/${orderId}/close`, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
+          method: "POST",
+          headers: { "content-type": "application/json" },
         });
         if (!response.ok) {
           const problem = await response.json().catch(() => null);
           store.getState().actions.setTableAction(actionKey, {
             id: current?.id || createId(),
-            status: 'error',
-            message: readServerMessage(problem, 'Não foi possível fechar a comanda'),
+            status: "error",
+            message: readServerMessage(
+              problem,
+              "Não foi possível fechar a comanda",
+            ),
           });
           return;
         }
         store.getState().actions.setTableAction(actionKey, {
           id: current?.id || createId(),
-          status: 'created',
-          message: 'Comanda fechada com sucesso.',
+          status: "created",
+          message: "Comanda fechada com sucesso.",
         });
         store.getState().actions.cancelCloseOrder();
         router.refresh();
       } catch {
         store.getState().actions.setTableAction(actionKey, {
           id: current?.id || createId(),
-          status: 'error',
+          status: "error",
           message:
-            'Falha de conexão. Tente novamente para repetir a mesma solicitação com segurança.',
+            "Falha de conexão. Tente novamente para repetir a mesma solicitação com segurança.",
         });
       }
     }
 
-    async function registerPayment(orderId: string, amount: string, method: string) {
+    async function registerPayment(
+      orderId: string,
+      amount: string,
+      method: string,
+    ) {
       const state = store.getState();
       const key = `payment-${orderId}`;
       const current = state.tableActions[key];
-      if (current?.status === 'pending') return;
+      if (current?.status === "pending") return;
 
       state.actions.setTableAction(key, {
         id: createId(),
-        status: 'pending',
-        message: 'Registrando pagamento…',
+        status: "pending",
+        message: "Registrando pagamento…",
       });
 
       try {
         const response = await fetch(`/api/orders/${orderId}/payments`, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
+          method: "POST",
+          headers: { "content-type": "application/json" },
           body: JSON.stringify({ amount, method }),
         });
         if (!response.ok) {
           const problem = await response.json().catch(() => null);
           store.getState().actions.setTableAction(key, {
             id: current?.id || createId(),
-            status: 'error',
-            message: readServerMessage(problem, 'Não foi possível registrar o pagamento'),
+            status: "error",
+            message: readServerMessage(
+              problem,
+              "Não foi possível registrar o pagamento",
+            ),
           });
           return;
         }
         store.getState().actions.setTableAction(key, {
           id: current?.id || createId(),
-          status: 'created',
-          message: 'Pagamento registrado com sucesso.',
+          status: "created",
+          message: "Pagamento registrado com sucesso.",
         });
         router.refresh();
       } catch {
         store.getState().actions.setTableAction(key, {
           id: current?.id || createId(),
-          status: 'error',
+          status: "error",
           message:
-            'Falha de conexão. Tente novamente para repetir a mesma solicitação com segurança.',
+            "Falha de conexão. Tente novamente para repetir a mesma solicitação com segurança.",
         });
       }
     }
@@ -287,45 +315,51 @@ export function useOrdersTablesApi() {
     ) {
       const state = store.getState();
       const current = state.itemActions[orderId];
-      if (current?.status === 'pending') return;
-      const id = current?.status === 'error' ? current.id : createId();
+      if (current?.status === "pending") return;
+      const id = current?.status === "error" ? current.id : createId();
       const menuItemId =
-        current?.status === 'error' && current.payload
+        current?.status === "error" && current.payload
           ? current.payload.menuItemId
-          : (draft?.menuItemId ?? state.selectedItems[orderId] ?? state.menuItems[0]?.id);
+          : (draft?.menuItemId ??
+            state.selectedItems[orderId] ??
+            state.menuItems[0]?.id);
       const quantity =
-        current?.status === 'error' && current.payload
+        current?.status === "error" && current.payload
           ? current.payload.quantity
-          : (draft?.quantity ?? state.quantities[orderId] ?? '1');
+          : (draft?.quantity ?? state.quantities[orderId] ?? "1");
       const itemNotes =
-        current?.status === 'error' && current.payload
+        current?.status === "error" && current.payload
           ? current.payload.notes
-          : (draft?.notes ?? state.notes[orderId] ?? '');
+          : (draft?.notes ?? state.notes[orderId] ?? "");
       if (!menuItemId) return;
-      const payload = { menuItemId, quantity: quantity.replace(',', '.'), notes: itemNotes };
+      const payload = {
+        menuItemId,
+        quantity: quantity.replace(",", "."),
+        notes: itemNotes,
+      };
 
       state.actions.setItemAction(orderId, {
         id,
-        status: 'pending',
-        message: 'Adicionando produto…',
+        status: "pending",
+        message: "Adicionando produto…",
         payload,
       });
 
       try {
         const response = await fetch(`/api/orders/${orderId}/items`, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
+          method: "POST",
+          headers: { "content-type": "application/json" },
           body: JSON.stringify({ id, ...payload }),
         });
         if (!response.ok) {
           store.getState().actions.setItemAction(orderId, {
             id,
-            status: 'error',
+            status: "error",
             payload,
             message:
               response.status >= 500
-                ? 'O servidor não confirmou o lançamento. Tente novamente para repetir a mesma solicitação.'
-                : 'Não foi possível adicionar o produto. Confira os dados e tente novamente.',
+                ? "O servidor não confirmou o lançamento. Tente novamente para repetir a mesma solicitação."
+                : "Não foi possível adicionar o produto. Confira os dados e tente novamente.",
           });
           return;
         }
@@ -333,11 +367,11 @@ export function useOrdersTablesApi() {
         const replayed = response.status === 200;
         store.getState().actions.setItemAction(orderId, {
           id,
-          status: replayed ? 'replayed' : 'created',
+          status: replayed ? "replayed" : "created",
           payload,
           message: replayed
-            ? 'Lançamento repetido reconhecido; o item não foi duplicado.'
-            : 'Produto adicionado à comanda.',
+            ? "Lançamento repetido reconhecido; o item não foi duplicado."
+            : "Produto adicionado à comanda.",
         });
         store.getState().actions.resetQuickAdd(orderId);
         if (draft) store.getState().actions.resetDetailAddFields();
@@ -345,9 +379,10 @@ export function useOrdersTablesApi() {
       } catch {
         store.getState().actions.setItemAction(orderId, {
           id,
-          status: 'error',
+          status: "error",
           payload,
-          message: 'Falha de conexão. Tente novamente para repetir o lançamento com segurança.',
+          message:
+            "Falha de conexão. Tente novamente para repetir o lançamento com segurança.",
         });
       }
     }
@@ -355,20 +390,20 @@ export function useOrdersTablesApi() {
     async function createProductFromOrder(
       orderId: string,
       name: string,
-      target: ProductCreateTarget = 'card',
+      target: ProductCreateTarget = "card",
     ) {
       const state = store.getState();
-      if (state.productCreateAction?.status === 'pending') return;
+      if (state.productCreateAction?.status === "pending") return;
       const id = createId();
       state.actions.setProductCreateAction({
         id,
-        status: 'pending',
-        message: 'Cadastrando produto…',
+        status: "pending",
+        message: "Cadastrando produto…",
       });
       try {
-        const response = await fetch('/api/menu-items', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
+        const response = await fetch("/api/menu-items", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
           body: JSON.stringify({
             name,
             category: state.newProductCategory,
@@ -379,31 +414,35 @@ export function useOrdersTablesApi() {
         if (!response.ok) {
           store.getState().actions.setProductCreateAction({
             id,
-            status: 'error',
-            message: readServerMessage(result, 'Não foi possível cadastrar o produto.'),
+            status: "error",
+            message: readServerMessage(
+              result,
+              "Não foi possível cadastrar o produto.",
+            ),
           });
           return;
         }
         if (!isMenuItem(result)) {
           store.getState().actions.setProductCreateAction({
             id,
-            status: 'error',
-            message: 'A resposta do cadastro não pôde ser validada. Atualize a página.',
+            status: "error",
+            message:
+              "A resposta do cadastro não pôde ser validada. Atualize a página.",
           });
           return;
         }
         store.getState().actions.completeProductCreate(orderId, result, target);
         store.getState().actions.setProductCreateAction({
           id,
-          status: 'created',
-          message: 'Produto cadastrado e selecionado.',
+          status: "created",
+          message: "Produto cadastrado e selecionado.",
         });
         router.refresh();
       } catch {
         store.getState().actions.setProductCreateAction({
           id,
-          status: 'error',
-          message: 'Falha de conexão ao cadastrar o produto.',
+          status: "error",
+          message: "Falha de conexão ao cadastrar o produto.",
         });
       }
     }
@@ -412,31 +451,34 @@ export function useOrdersTablesApi() {
       const state = store.getState();
       const draft = state.itemDrafts[item.id] ?? {
         quantity: item.quantity,
-        notes: item.notes ?? '',
+        notes: item.notes ?? "",
       };
       state.actions.setItemMutation(item.id, {
         id: item.id,
-        status: 'pending',
-        message: 'Salvando alterações…',
+        status: "pending",
+        message: "Salvando alterações…",
       });
       try {
-        const response = await fetch(`/api/orders/${orderId}/items/${item.id}`, {
-          method: 'PATCH',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            expectedVersion: item.version,
-            quantity: draft.quantity,
-            notes: draft.notes,
-          }),
-        });
+        const response = await fetch(
+          `/api/orders/${orderId}/items/${item.id}`,
+          {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              expectedVersion: item.version,
+              quantity: draft.quantity,
+              notes: draft.notes,
+            }),
+          },
+        );
         if (!response.ok) {
           store.getState().actions.setItemMutation(item.id, {
             id: item.id,
-            status: 'error',
+            status: "error",
             message:
               response.status === 409
-                ? 'O item mudou em outra sessão. A comanda será atualizada; revise antes de editar novamente.'
-                : 'Não foi possível salvar. Atualize a comanda e tente novamente.',
+                ? "O item mudou em outra sessão. A comanda será atualizada; revise antes de editar novamente."
+                : "Não foi possível salvar. Atualize a comanda e tente novamente.",
           });
           if (response.status === 409) router.refresh();
           return;
@@ -448,8 +490,9 @@ export function useOrdersTablesApi() {
       } catch {
         store.getState().actions.setItemMutation(item.id, {
           id: item.id,
-          status: 'error',
-          message: 'Falha de conexão. Atualize a comanda para confirmar o estado do item.',
+          status: "error",
+          message:
+            "Falha de conexão. Atualize a comanda para confirmar o estado do item.",
         });
         router.refresh();
       }
@@ -463,23 +506,26 @@ export function useOrdersTablesApi() {
       }
       state.actions.setItemMutation(item.id, {
         id: item.id,
-        status: 'pending',
-        message: 'Removendo item…',
+        status: "pending",
+        message: "Removendo item…",
       });
       try {
-        const response = await fetch(`/api/orders/${orderId}/items/${item.id}`, {
-          method: 'DELETE',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ expectedVersion: item.version }),
-        });
+        const response = await fetch(
+          `/api/orders/${orderId}/items/${item.id}`,
+          {
+            method: "DELETE",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ expectedVersion: item.version }),
+          },
+        );
         if (!response.ok) {
           store.getState().actions.setItemMutation(item.id, {
             id: item.id,
-            status: 'error',
+            status: "error",
             message:
               response.status === 409
-                ? 'O item mudou em outra sessão. A comanda será atualizada.'
-                : 'Não foi possível remover o item. Atualize a comanda e tente novamente.',
+                ? "O item mudou em outra sessão. A comanda será atualizada."
+                : "Não foi possível remover o item. Atualize a comanda e tente novamente.",
           });
           if (response.status === 409) router.refresh();
           return;
@@ -492,8 +538,9 @@ export function useOrdersTablesApi() {
       } catch {
         store.getState().actions.setItemMutation(item.id, {
           id: item.id,
-          status: 'error',
-          message: 'Falha de conexão. Atualize a comanda para confirmar o estado do item.',
+          status: "error",
+          message:
+            "Falha de conexão. Atualize a comanda para confirmar o estado do item.",
         });
         store.getState().actions.cancelDeleteItem();
         router.refresh();
@@ -509,13 +556,13 @@ export function useOrdersTablesApi() {
       const key = `order-details-${orderId}`;
       store.getState().actions.setTableAction(key, {
         id: createId(),
-        status: 'pending',
-        message: 'Salvando…',
+        status: "pending",
+        message: "Salvando…",
       });
       try {
         const response = await fetch(`/api/orders/${orderId}`, {
-          method: 'PATCH',
-          headers: { 'content-type': 'application/json' },
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
           body: JSON.stringify({
             customerId: customerId ?? null,
             customerName: customerName?.trim() || null,
@@ -526,26 +573,28 @@ export function useOrdersTablesApi() {
           const problem = await response.json().catch(() => null);
           store.getState().actions.setTableAction(key, {
             id: createId(),
-            status: 'error',
+            status: "error",
             message:
-              problem !== null && typeof problem === 'object' && 'detail' in problem &&
-              typeof problem.detail === 'string'
+              problem !== null &&
+              typeof problem === "object" &&
+              "detail" in problem &&
+              typeof problem.detail === "string"
                 ? problem.detail
-                : 'Não foi possível salvar os dados da comanda.',
+                : "Não foi possível salvar os dados da comanda.",
           });
           return;
         }
         store.getState().actions.setTableAction(key, {
           id: createId(),
-          status: 'created',
-          message: 'Dados salvos.',
+          status: "created",
+          message: "Dados salvos.",
         });
         router.refresh();
       } catch {
         store.getState().actions.setTableAction(key, {
           id: createId(),
-          status: 'error',
-          message: 'Falha de conexão ao salvar os dados da comanda.',
+          status: "error",
+          message: "Falha de conexão ao salvar os dados da comanda.",
         });
       }
     }

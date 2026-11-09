@@ -1,7 +1,7 @@
 import { createServer, type Server as HttpServer } from "node:http";
 import { timingSafeEqual } from "node:crypto";
 import { createAdapter } from "@socket.io/redis-adapter";
-import { RoleSchema, type Role } from "@mudra/shared";
+import { RoleSchema, type Role } from "@13axis/shared";
 import { createClient } from "redis";
 import { Server as SocketIOServer, type Socket } from "socket.io";
 import {
@@ -70,7 +70,12 @@ function handleHttpRequest(
   // expor versão, credenciais ou detalhes internos.
   if (path === "/health") {
     if (request.method !== "GET" && request.method !== "HEAD") {
-      writeJson(response, 405, { error: "method_not_allowed" }, { allow: "GET, HEAD" });
+      writeJson(
+        response,
+        405,
+        { error: "method_not_allowed" },
+        { allow: "GET, HEAD" },
+      );
       return;
     }
     const payload = JSON.stringify({ status: "ok", redis: redisStatus() });
@@ -89,7 +94,12 @@ function handleHttpRequest(
 
   if (path === "/internal/events") {
     if (request.method !== "POST") {
-      writeJson(response, 405, { error: "method_not_allowed" }, { allow: "POST" });
+      writeJson(
+        response,
+        405,
+        { error: "method_not_allowed" },
+        { allow: "POST" },
+      );
       return;
     }
     const authorization = request.headers.authorization;
@@ -97,11 +107,18 @@ function handleHttpRequest(
       ? Buffer.from(authorization.slice(7), "utf8")
       : Buffer.alloc(0);
     const expected = Buffer.from(secret);
-    if (provided.length !== expected.length || !timingSafeEqual(provided, expected)) {
+    if (
+      provided.length !== expected.length ||
+      !timingSafeEqual(provided, expected)
+    ) {
       writeJson(response, 401, { error: "unauthorized" });
       return;
     }
-    if (!request.headers["content-type"]?.toLowerCase().startsWith("application/json")) {
+    if (
+      !request.headers["content-type"]
+        ?.toLowerCase()
+        .startsWith("application/json")
+    ) {
       writeJson(response, 415, { error: "unsupported_media_type" });
       return;
     }
@@ -123,7 +140,9 @@ function handleHttpRequest(
     request.on("end", () => {
       if (response.writableEnded) return;
       try {
-        const body: unknown = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+        const body: unknown = JSON.parse(
+          Buffer.concat(chunks).toString("utf8"),
+        );
         if (
           body === null ||
           typeof body !== "object" ||
@@ -167,7 +186,8 @@ export function createRealtimeServer(
       response,
       io,
       config.jwtSecret,
-      config.redisStatus ?? ((): "connected" | "disconnected" | "disabled" => "disabled"),
+      config.redisStatus ??
+        ((): "connected" | "disconnected" | "disabled" => "disabled"),
     );
   });
 
@@ -201,7 +221,10 @@ export function createRealtimeServer(
       }
       // Avoid Node's timer overflow for unusually long-lived tokens; checking
       // again early is safe and still guarantees disconnection by exp.
-      expiryTimer = setTimeout(disconnectAtExpiry, Math.min(remainingMs, 2_147_000_000));
+      expiryTimer = setTimeout(
+        disconnectAtExpiry,
+        Math.min(remainingMs, 2_147_000_000),
+      );
     };
     disconnectAtExpiry();
     socket.once("disconnect", () => clearTimeout(expiryTimer));
@@ -218,11 +241,15 @@ export function publishDomainEvent<Name extends RealtimeEventName>(
 ): void {
   const validatedPayload = parseRealtimeEvent(name, payload);
   const restaurantId = validatedPayload.restaurantId;
-  const allowedRoles = rolesForEvent(name).filter((role: Role) => canReceiveEvent(role, name));
+  const allowedRoles = rolesForEvent(name).filter((role: Role) =>
+    canReceiveEvent(role, name),
+  );
 
   // Socket.IO room unions deduplicate sockets which happen to occupy more than
   // one target room. Each target is derived from the validated event tenant.
-  const targets = allowedRoles.map((role) => restaurantRoleRoom(restaurantId, role));
+  const targets = allowedRoles.map((role) =>
+    restaurantRoleRoom(restaurantId, role),
+  );
   if (targets.length === 0) return;
   io.to(targets).emit(name, validatedPayload);
 }
@@ -256,7 +283,9 @@ export type RealtimeRuntime = {
  * para o `http.Server` exportado (Vercel Services); `startServer` adiciona
  * o listen para dev local e Docker.
  */
-export async function createRuntime(env: NodeJS.ProcessEnv = process.env): Promise<RealtimeRuntime> {
+export async function createRuntime(
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<RealtimeRuntime> {
   // Validate required auth before opening a listener or attempting Redis.
   const jwtSecret = loadJwtSecret(env.REALTIME_JWT_SECRET);
   // SOCKET_IO_PORT (dev/Docker) tem prioridade; PORT é o padrão de plataformas.
@@ -280,8 +309,12 @@ export async function createRuntime(env: NodeJS.ProcessEnv = process.env): Promi
     if (env.REDIS_URL) {
       redisPublisher = createClient({ url: env.REDIS_URL });
       redisSubscriber = redisPublisher.duplicate();
-      redisPublisher.on("error", () => console.error("Redis publisher connection error."));
-      redisSubscriber.on("error", () => console.error("Redis subscriber connection error."));
+      redisPublisher.on("error", () =>
+        console.error("Redis publisher connection error."),
+      );
+      redisSubscriber.on("error", () =>
+        console.error("Redis subscriber connection error."),
+      );
       await Promise.all([redisPublisher.connect(), redisSubscriber.connect()]);
       io.adapter(createAdapter(redisPublisher, redisSubscriber));
     }
@@ -326,7 +359,9 @@ export function describeStartupError(error: unknown): string {
   return "Realtime server startup failed; check server configuration and dependencies.";
 }
 
-export async function startServer(env: NodeJS.ProcessEnv = process.env): Promise<RealtimeRuntime> {
+export async function startServer(
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<RealtimeRuntime> {
   const runtime = await createRuntime(env);
   try {
     await new Promise<void>((resolve, reject) => {
@@ -342,7 +377,9 @@ export async function startServer(env: NodeJS.ProcessEnv = process.env): Promise
     throw error;
   }
 
-  console.info(`Realtime Socket.IO listening on ${runtime.host}:${runtime.port}; Redis adapter ${env.REDIS_URL ? "enabled" : "disabled"}.`);
+  console.info(
+    `Realtime Socket.IO listening on ${runtime.host}:${runtime.port}; Redis adapter ${env.REDIS_URL ? "enabled" : "disabled"}.`,
+  );
 
   return runtime;
 }

@@ -1,4 +1,4 @@
-# `@mudra/realtime`
+# `@13axis/realtime`
 
 Standalone Node.js Socket.IO service for restaurant-scoped operational notifications. It is a notification channel only: PostgreSQL/API remains canonical, and connected clients cannot create or mutate orders, items, tables, or menu data through Socket.IO.
 
@@ -14,9 +14,9 @@ Standalone Node.js Socket.IO service for restaurant-scoped operational notificat
 The JWT secret is treated as UTF-8 text, not base64-decoded. Configure the same signing key only in trusted server environments; never put it in a browser/mobile bundle, client response, URL, source control, or logs. Use a securely generated value of at least 32 bytes and rotate it through a coordinated deployment.
 
 ```sh
-pnpm --filter @mudra/realtime dev
-pnpm --filter @mudra/realtime build
-pnpm --filter @mudra/realtime start
+pnpm --filter @13axis/realtime dev
+pnpm --filter @13axis/realtime build
+pnpm --filter @13axis/realtime start
 ```
 
 Turbo-compatible scripts are provided for `build`, `lint`, `typecheck`, and `test`.
@@ -35,13 +35,13 @@ const socket = io(REALTIME_URL, {
 
 Accepted tokens must be compact JWTs signed with **HS256** using `REALTIME_JWT_SECRET` and contain:
 
-| Claim | Requirement |
-|---|---|
-| `userId` | UUID v7 for the authenticated user |
-| `restaurantId` | UUID v7 for the restaurant the user is authorized to access |
-| `role` | One of `ADMIN`, `MANAGER`, `WAITER`, `CASHIER`, `KITCHEN`, `SCALE` |
-| `exp` | Standard numeric JWT expiration, required and in the future |
-| `iss`, `aud` | Optional unless the corresponding realtime environment setting is configured |
+| Claim          | Requirement                                                                  |
+| -------------- | ---------------------------------------------------------------------------- |
+| `userId`       | UUID v7 for the authenticated user                                           |
+| `restaurantId` | UUID v7 for the restaurant the user is authorized to access                  |
+| `role`         | One of `ADMIN`, `MANAGER`, `WAITER`, `CASHIER`, `KITCHEN`, `SCALE`           |
+| `exp`          | Standard numeric JWT expiration, required and in the future                  |
+| `iss`, `aud`   | Optional unless the corresponding realtime environment setting is configured |
 
 The service validates signature, algorithm, expiration and claims before assigning room membership. Missing claims, invalid roles, expiration and invalid signatures return the same generic `unauthorized` connection error. The restaurant and role come exclusively from verified signed claims; client event payloads and requested room names are not used to grant access. Tokens are rechecked on every reconnect. An established connection is forcibly disconnected at token expiration so the client must reconnect with a newly authenticated token.
 
@@ -57,23 +57,23 @@ All rooms are computed and joined by the server after authentication:
 - `restaurant:<restaurantId>:kitchen` — `KITCHEN` only.
 - Internal `restaurant:<restaurantId>:role:<role>` rooms are server-derived fan-out targets, used to enforce the per-event role matrix. Clients cannot request/join these rooms.
 
-`SCALE` is a recognized shared role but has no room access because its permissions are explicitly unmapped in `@mudra/shared`. Event policy is explicit:
+`SCALE` is a recognized shared role but has no room access because its permissions are explicitly unmapped in `@13axis/shared`. Event policy is explicit:
 
-| Server → client event | Allowed roles |
-|---|---|
-| `order:created` | `ADMIN`, `MANAGER`, `WAITER`, `CASHIER`, `KITCHEN` |
-| `order:item:added` | `ADMIN`, `MANAGER`, `WAITER`, `KITCHEN` |
-| `order:item:status` | `ADMIN`, `MANAGER`, `WAITER`, `KITCHEN` |
-| `order:updated` | `ADMIN`, `MANAGER`, `WAITER`, `CASHIER`, `KITCHEN` |
-| `order:closed` | `ADMIN`, `MANAGER`, `WAITER`, `CASHIER`, `KITCHEN` |
-| `table:status` | `ADMIN`, `MANAGER`, `WAITER`, `CASHIER`, `KITCHEN` |
-| `menu:updated` | `ADMIN`, `MANAGER`, `WAITER` |
+| Server → client event | Allowed roles                                      |
+| --------------------- | -------------------------------------------------- |
+| `order:created`       | `ADMIN`, `MANAGER`, `WAITER`, `CASHIER`, `KITCHEN` |
+| `order:item:added`    | `ADMIN`, `MANAGER`, `WAITER`, `KITCHEN`            |
+| `order:item:status`   | `ADMIN`, `MANAGER`, `WAITER`, `KITCHEN`            |
+| `order:updated`       | `ADMIN`, `MANAGER`, `WAITER`, `CASHIER`, `KITCHEN` |
+| `order:closed`        | `ADMIN`, `MANAGER`, `WAITER`, `CASHIER`, `KITCHEN` |
+| `table:status`        | `ADMIN`, `MANAGER`, `WAITER`, `CASHIER`, `KITCHEN` |
+| `menu:updated`        | `ADMIN`, `MANAGER`, `WAITER`                       |
 
 There are no client-to-server domain event handlers. A room grants notification visibility only and never authorizes an API write. The REST/sync API must independently reauthorize each mutation.
 
 ## Event envelope and payloads
 
-The channel names and minimal data fields follow `specification.md` section 8.2 and `docs/architecture/realtime-contracts.md`. Payload schemas are strict Zod schemas and use shared UUID v7, timestamp, order-item, status and money types from `@mudra/shared`. Every notification uses the proposed contract envelope:
+The channel names and minimal data fields follow `specification.md` section 8.2 and `docs/architecture/realtime-contracts.md`. Payload schemas are strict Zod schemas and use shared UUID v7, timestamp, order-item, status and money types from `@13axis/shared`. Every notification uses the proposed contract envelope:
 
 ```ts
 {
@@ -91,15 +91,15 @@ The channel names and minimal data fields follow `specification.md` section 8.2 
 }
 ```
 
-| Event | `data` |
-|---|---|
-| `order:created` | `{ orderId, tableId }` |
-| `order:item:added` | `{ orderId, tableId, item }`; `item` is the canonical shared `OrderItem` DTO |
-| `order:item:status` | `{ orderId, itemId, status }`; shared status enum |
-| `order:updated` | `{ orderId, changes }`; only `tableId`, `waiterId`, `status`, `total` |
-| `order:closed` | `{ orderId, tableId }` |
-| `table:status` | `{ tableId, status }`; shared table status enum |
-| `menu:updated` | `{ itemId, changes }`; only category, name, price, description, image, code and availability |
+| Event               | `data`                                                                                       |
+| ------------------- | -------------------------------------------------------------------------------------------- |
+| `order:created`     | `{ orderId, tableId }`                                                                       |
+| `order:item:added`  | `{ orderId, tableId, item }`; `item` is the canonical shared `OrderItem` DTO                 |
+| `order:item:status` | `{ orderId, itemId, status }`; shared status enum                                            |
+| `order:updated`     | `{ orderId, changes }`; only `tableId`, `waiterId`, `status`, `total`                        |
+| `order:closed`      | `{ orderId, tableId }`                                                                       |
+| `table:status`      | `{ tableId, status }`; shared table status enum                                              |
+| `menu:updated`      | `{ itemId, changes }`; only category, name, price, description, image, code and availability |
 
 `changes` rejects unknown fields and empty patches. The envelope is the proposed envelope in the architecture contract, not yet a cross-package frozen schema; coordinate adoption with API, web, Android and `packages/shared`. `order:closed` is implemented as a notification contract only: callers must publish it only after the canonical close operation commits. It does not imply a payment or validate closure rules.
 

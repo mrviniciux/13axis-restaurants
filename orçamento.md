@@ -1,4 +1,4 @@
-# Orçamento de infraestrutura — Mudra for Restaurants
+# Orçamento de infraestrutura — 13axis for Restaurants
 
 **Data da estimativa:** 06/11/2026
 **Escopo:** piloto operacional com **1 restaurante** (back-office web + tempo real + banco).
@@ -162,8 +162,8 @@ No modelo atual (banco por restaurante), a infraestrutura **escala linearmente**
 | Nº de restaurantes | Railway (Hobby) | Hetzner + Coolify |
 | ------------------ | --------------- | ----------------- |
 | 1                  | ~US$ 35/mês     | ~€ 7/mês          |
-| 5                  | ~US$ 175/mês    | ~€ 35/mês*        |
-| 10                 | ~US$ 350/mês    | ~€ 70/mês*        |
+| 5                  | ~US$ 175/mês    | ~€ 35/mês\*       |
+| 10                 | ~US$ 350/mês    | ~€ 70/mês\*       |
 
 \* No Hetzner, múltiplos projetos podem (talvez) caber numa VPS maior, mas a operação
 fica proporcionalmente mais complexa (bancos e serviços por restaurante).

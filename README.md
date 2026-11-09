@@ -1,4 +1,4 @@
-# Mudra for Restaurants
+# 13axis for Restaurants
 
 Sistema de gestão de restaurante com back-office web e app Android, projetado
 para operação offline-first.
@@ -54,7 +54,7 @@ Get-Content .env | ForEach-Object {
 
 pnpm install
 docker compose up -d --wait postgres
-pnpm --filter @mudra/database db:migrate:deploy
+pnpm --filter @13axis/database db:migrate:deploy
 ```
 
 `--wait` aguarda o healthcheck do PostgreSQL antes de seguir. Se o Docker
@@ -65,17 +65,17 @@ Crie o primeiro restaurante e administrador. O CLI solicita os dados no
 terminal e oculta a senha digitada:
 
 ```powershell
-pnpm --filter @mudra/database create-admin
+pnpm --filter @13axis/database create-admin
 ```
 
 Para um cadastro não interativo e idempotente (banco novo sem TTY, como o do
 Vercel), use o seed pré-configurado:
 
 ```powershell
-pnpm --filter @mudra/database seed:admin
+pnpm --filter @13axis/database seed:admin
 ```
 
-Ele cria `Mudra Alimentos` com o ADMIN `httpmarks@gmail.com` quando o banco
+Ele cria `13axis Alimentos` com o ADMIN `httpmarks@gmail.com` quando o banco
 está vazio, reaproveita os existentes e confere a senha do administrador.
 Os dados ficam em `packages/database/src/cli/seed-admin.ts`; revise a senha
 antes de expor o ambiente em produção.
@@ -87,9 +87,9 @@ que ainda não estão abertos:
 
 ```powershell
 $env:NODE_ENV = "development"
-pnpm --filter @mudra/database seed:demo-tables
-pnpm --filter @mudra/database seed:demo-menu
-pnpm --filter @mudra/database seed:demo-orders
+pnpm --filter @13axis/database seed:demo-tables
+pnpm --filter @13axis/database seed:demo-menu
+pnpm --filter @13axis/database seed:demo-orders
 ```
 
 `seed:demo-orders` garante que as comandas 20 a 29 estejam abertas, criando
@@ -105,15 +105,15 @@ precisar preservar os dados.
 
 #### Opção 1 — apagar também o volume Docker (reset completo)
 
-Remove o container e o volume `mudra-postgres`, criando um PostgreSQL vazio na
+Remove o container e o volume `13axis-postgres`, criando um PostgreSQL vazio na
 sequência:
 
 ```powershell
 docker compose down -v
 docker compose up -d --wait postgres
-pnpm --filter @mudra/database db:migrate:deploy
-pnpm --filter @mudra/database db:generate
-pnpm --filter @mudra/database create-admin
+pnpm --filter @13axis/database db:migrate:deploy
+pnpm --filter @13axis/database db:generate
+pnpm --filter @13axis/database create-admin
 ```
 
 Depois das migrations, `create-admin` recria o restaurante e o primeiro ADMIN.
@@ -121,9 +121,9 @@ Para voltar a ter os dados de demonstração:
 
 ```powershell
 $env:NODE_ENV = "development"
-pnpm --filter @mudra/database seed:demo-tables
-pnpm --filter @mudra/database seed:demo-menu
-pnpm --filter @mudra/database seed:demo-orders
+pnpm --filter @13axis/database seed:demo-tables
+pnpm --filter @13axis/database seed:demo-menu
+pnpm --filter @13axis/database seed:demo-orders
 ```
 
 #### Opção 2 — manter o container e recriar apenas o schema
@@ -133,9 +133,9 @@ e apenas o schema `public` é apagado e recriado:
 
 ```powershell
 docker compose up -d --wait postgres
-docker compose exec -T postgres psql -U mudra -d mudra -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
-pnpm --filter @mudra/database db:migrate:deploy
-pnpm --filter @mudra/database create-admin
+docker compose exec -T postgres psql -U 13axis -d 13axis -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+pnpm --filter @13axis/database db:migrate:deploy
+pnpm --filter @13axis/database create-admin
 ```
 
 Também é possível delegar o reset ao Prisma. O comando abaixo apaga o schema,
@@ -143,8 +143,8 @@ reaplica todas as migrations e regenera o cliente Prisma:
 
 ```powershell
 docker compose up -d --wait postgres
-pnpm --filter @mudra/database exec prisma migrate reset --force --skip-seed
-pnpm --filter @mudra/database create-admin
+pnpm --filter @13axis/database exec prisma migrate reset --force --skip-seed
+pnpm --filter @13axis/database create-admin
 ```
 
 O `migrate reset` não cria o ADMIN nem os dados de demonstração; execute
@@ -161,14 +161,14 @@ pnpm dev
 O comando inicia o Next.js, o serviço Socket.IO e o servidor Expo. Abra
 **http://localhost:3000** para o back-office. O Expo mostra um QR code para
 abrir o app em um dispositivo; para usar um emulador Android iniciado no Android
-Studio, use `pnpm --filter @mudra/mobile android` em outro terminal, após
+Studio, use `pnpm --filter @13axis/mobile android` em outro terminal, após
 carregar nele as mesmas variáveis do `.env`.
 
 Se o Expo ficar parado em `Starting Metro Bundler` por causa de verificações de
 rede, inicie somente o app mobile em modo offline:
 
 ```powershell
-pnpm --filter @mudra/mobile dev -- --offline
+pnpm --filter @13axis/mobile dev -- --offline
 ```
 
 Esse modo não inicia web nem realtime; execute os comandos desses apps em
@@ -178,9 +178,9 @@ Para trabalhar em apenas um app, mantenha o PostgreSQL ligado e use o filtro
 correspondente:
 
 ```powershell
-pnpm --filter @mudra/web dev
-pnpm --filter @mudra/realtime dev
-pnpm --filter @mudra/mobile dev
+pnpm --filter @13axis/web dev
+pnpm --filter @13axis/realtime dev
+pnpm --filter @13axis/mobile dev
 ```
 
 Em terminais separados, carregue também as variáveis do `.env` antes de iniciar
@@ -215,20 +215,19 @@ docker compose ps
 
 Notas:
 
-- Pare o `pnpm dev` antes: os containers publicam as mesmas portas 3000 e
-  3001.
+- Pare o `pnpm dev` antes: os containers publicam as mesmas portas 3000 e 3001.
 - O container `web` **não** executa migrations automaticamente; aplique-as
   antes (fluxo acima) ou use o perfil `migrate`:
 
   ```powershell
   docker compose --profile migrate run --rm migrate
-  docker compose --profile migrate run --rm migrate pnpm --filter @mudra/database create-admin
+  docker compose --profile migrate run --rm migrate pnpm --filter @13axis/database create-admin
   ```
 
 - `NEXT_PUBLIC_REALTIME_URL` é embutida no bundle no build; ao mudá-la,
   reconstrua com `docker compose build web`.
 - Os comandos do fluxo de desenvolvimento (`docker compose up -d --wait
-  postgres`) continuam subindo **apenas** o PostgreSQL.
+postgres`) continuam subindo **apenas** o PostgreSQL.
 
 ## Estado atual dos módulos
 

@@ -1,6 +1,6 @@
-import { UtcTimestampSchema, UuidV7Schema } from '@mudra/shared';
-import { z } from 'zod';
-import { ApiProblemError, type ProblemFieldError } from './problem';
+import { UtcTimestampSchema, UuidV7Schema } from "@13axis/shared";
+import { z } from "zod";
+import { ApiProblemError, type ProblemFieldError } from "./problem";
 
 export type CreateOrderInput = Readonly<{
   id: string;
@@ -17,7 +17,13 @@ export type CreateOrderInput = Readonly<{
 const CreateOrderSchema = z
   .object({
     id: UuidV7Schema,
-    comandaNumber: z.number().int().min(1).max(2_147_483_647).nullable().optional(),
+    comandaNumber: z
+      .number()
+      .int()
+      .min(1)
+      .max(2_147_483_647)
+      .nullable()
+      .optional(),
     tableId: UuidV7Schema.nullable().optional(),
     customerId: UuidV7Schema.nullable().optional(),
     customerName: z.string().trim().max(200).nullable().optional(),
@@ -27,20 +33,23 @@ const CreateOrderSchema = z
   })
   .strict();
 
-function toFieldErrors(issues: readonly z.core.$ZodIssue[]): ProblemFieldError[] {
+function toFieldErrors(
+  issues: readonly z.core.$ZodIssue[],
+): ProblemFieldError[] {
   return issues.map((issue) => ({
-    path: issue.path.map(String).join('.'),
-    code: issue.code === 'unrecognized_keys' ? 'unrecognized_field' : issue.code,
+    path: issue.path.map(String).join("."),
+    code:
+      issue.code === "unrecognized_keys" ? "unrecognized_field" : issue.code,
     message:
-      issue.code === 'unrecognized_keys'
-        ? 'Campo não permitido.'
-        : issue.path.includes('id') || issue.path.includes('tableId')
-          ? 'Identificador inválido.'
-          : issue.path.includes('createdAt')
-            ? 'A data deve ser um timestamp UTC válido.'
-              : issue.path.includes('comandaNumber')
-                ? 'Informe um número de comanda inteiro e positivo.'
-              : 'Valor inválido.',
+      issue.code === "unrecognized_keys"
+        ? "Campo não permitido."
+        : issue.path.includes("id") || issue.path.includes("tableId")
+          ? "Identificador inválido."
+          : issue.path.includes("createdAt")
+            ? "A data deve ser um timestamp UTC válido."
+            : issue.path.includes("comandaNumber")
+              ? "Informe um número de comanda inteiro e positivo."
+              : "Valor inválido.",
   }));
 }
 
@@ -77,8 +86,8 @@ export type AddOrderItemInput = Readonly<{
 const QuantitySchema = z
   .string()
   .regex(/^(?:0|[1-9]\d{0,6})(?:[.,]\d{1,3})?$/)
-  .refine((value) => Number(value.replace(',', '.')) > 0)
-  .transform((value) => value.replace(',', '.'));
+  .refine((value) => Number(value.replace(",", ".")) > 0)
+  .transform((value) => value.replace(",", "."));
 
 const AddOrderItemSchema = z
   .object({
@@ -118,7 +127,9 @@ const UpdateOrderItemSchema = z
   })
   .strict();
 
-export function parseUpdateOrderItemInput(input: unknown): UpdateOrderItemInput {
+export function parseUpdateOrderItemInput(
+  input: unknown,
+): UpdateOrderItemInput {
   const parsed = UpdateOrderItemSchema.safeParse(input);
   if (!parsed.success) {
     throw ApiProblemError.validation(toFieldErrors(parsed.error.issues));
@@ -155,7 +166,9 @@ const UpdateOrderDetailsSchema = z
   })
   .strict();
 
-export function parseUpdateOrderDetailsInput(input: unknown): UpdateOrderDetailsInput {
+export function parseUpdateOrderDetailsInput(
+  input: unknown,
+): UpdateOrderDetailsInput {
   const parsed = UpdateOrderDetailsSchema.safeParse(input);
   if (!parsed.success) {
     throw ApiProblemError.validation(toFieldErrors(parsed.error.issues));

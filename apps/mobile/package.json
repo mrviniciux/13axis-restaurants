@@ -1,5 +1,5 @@
 {
-  "name": "@mudra/mobile",
+  "name": "@13axis/mobile",
   "version": "0.1.0",
   "private": true,
   "main": "expo-router/entry",

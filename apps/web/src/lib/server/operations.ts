@@ -1,26 +1,26 @@
-import 'server-only';
+import "server-only";
 
-import { Prisma, type PrismaClient } from '@mudra/database';
-import { z } from 'zod';
-import { createId, UtcTimestampSchema, UuidV7Schema } from '@mudra/shared';
+import { Prisma, type PrismaClient } from "@13axis/database";
+import { z } from "zod";
+import { createId, UtcTimestampSchema, UuidV7Schema } from "@13axis/shared";
 import {
   requireOperationalReadAccess,
   requirePermission,
   type AuthenticatedServerContext,
-} from './access-control';
-import { ApiProblemError } from './problem';
+} from "./access-control";
+import { ApiProblemError } from "./problem";
 import {
   parseAddOrderItemInput,
   parseCreateOrderInput,
   parseDeleteOrderItemInput,
   parseUpdateOrderDetailsInput,
   parseUpdateOrderItemInput,
-} from './order-input';
-import { parseCreateMenuItemInput } from './menu-item-input';
-import { parseCreateBuffetItemInput } from './buffet-item-input';
-import { parseCreateCustomerInput } from './customer-input';
-import { prisma } from './prisma';
-import { includesComandaNumber, parseComandaNumbers } from '../comanda-numbers';
+} from "./order-input";
+import { parseCreateMenuItemInput } from "./menu-item-input";
+import { parseCreateBuffetItemInput } from "./buffet-item-input";
+import { parseCreateCustomerInput } from "./customer-input";
+import { prisma } from "./prisma";
+import { includesComandaNumber, parseComandaNumbers } from "../comanda-numbers";
 
 type TransactionClient = Prisma.TransactionClient;
 
@@ -50,12 +50,14 @@ const orderWithItemsSelect = {
   version: true,
   items: {
     where: { deletedAt: null },
-    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     select: orderItemSelect,
   },
 } satisfies Prisma.OrderSelect;
 
-type OrderWithItems = Prisma.OrderGetPayload<{ select: typeof orderWithItemsSelect }>;
+type OrderWithItems = Prisma.OrderGetPayload<{
+  select: typeof orderWithItemsSelect;
+}>;
 
 export type OpenOrderSummary = Readonly<{
   id: string;
@@ -65,7 +67,7 @@ export type OpenOrderSummary = Readonly<{
   customerName: string | null;
   peopleCount: number | null;
   waiterId: string | null;
-  status: 'OPEN';
+  status: "OPEN";
   total: string;
   createdAt: string;
   updatedAt: string;
@@ -100,10 +102,10 @@ export type TableSummary = Readonly<{
   id: string;
   number: number;
   capacity: number;
-  status: 'FREE' | 'OCCUPIED' | 'RESERVED' | 'CLOSING';
+  status: "FREE" | "OCCUPIED" | "RESERVED" | "CLOSING";
   version: number;
   updatedAt: string;
-  openOrders: readonly Pick<OpenOrderSummary, 'id' | 'createdAt'>[];
+  openOrders: readonly Pick<OpenOrderSummary, "id" | "createdAt">[];
 }>;
 
 export type CreatedOrderResult = Readonly<{
@@ -112,7 +114,7 @@ export type CreatedOrderResult = Readonly<{
 }>;
 
 export type AddedOrderItemResult = Readonly<{
-  item: OpenOrderSummary['items'][number];
+  item: OpenOrderSummary["items"][number];
   order: OpenOrderSummary;
   replayed: boolean;
 }>;
@@ -123,14 +125,16 @@ function isUuidV7(value: unknown): value is string {
 
 function toOrderItemSummary(
   item: Prisma.OrderItemGetPayload<{ select: typeof orderItemSelect }>,
-): OpenOrderSummary['items'][number] {
+): OpenOrderSummary["items"][number] {
   return {
     id: item.id,
     menuItemId: item.menuItemId,
     name: item.menuItem.name,
     quantity: item.quantity.toString(),
     unitPrice: item.unitPrice.toFixed(2),
-    lineTotal: new Prisma.Decimal(item.unitPrice.toString()).mul(item.quantity).toFixed(2),
+    lineTotal: new Prisma.Decimal(item.unitPrice.toString())
+      .mul(item.quantity)
+      .toFixed(2),
     notes: item.notes,
     status: item.status,
     version: item.version,
@@ -149,7 +153,9 @@ function toOpenOrderSummary(order: {
   createdAt: Date;
   updatedAt: Date;
   version: number;
-  items?: readonly Prisma.OrderItemGetPayload<{ select: typeof orderItemSelect }>[];
+  items?: readonly Prisma.OrderItemGetPayload<{
+    select: typeof orderItemSelect;
+  }>[];
 }): OpenOrderSummary {
   return {
     id: order.id,
@@ -159,7 +165,7 @@ function toOpenOrderSummary(order: {
     customerName: order.customerName ?? null,
     peopleCount: order.peopleCount ?? null,
     waiterId: order.waiterId,
-    status: 'OPEN',
+    status: "OPEN",
     total: order.total.toFixed(2),
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),
@@ -216,19 +222,19 @@ async function assertCurrentPrincipal(
   if (!user || !restaurant || user.role !== context.role) {
     throw new ApiProblemError(
       401,
-      'UNAUTHENTICATED',
-      'Autenticação necessária',
-      'É necessária uma sessão autenticada válida.',
+      "UNAUTHENTICATED",
+      "Autenticação necessária",
+      "É necessária uma sessão autenticada válida.",
     );
   }
 }
 
 function isUniqueConstraintError(error: unknown): boolean {
   return (
-    typeof error === 'object' &&
+    typeof error === "object" &&
     error !== null &&
-    'code' in error &&
-    (error as { code?: unknown }).code === 'P2002'
+    "code" in error &&
+    (error as { code?: unknown }).code === "P2002"
   );
 }
 
@@ -238,7 +244,10 @@ function isUniqueConstraintError(error: unknown): boolean {
  */
 export async function listTables(
   context: unknown,
-  options: Readonly<{ updatedSince?: string; includeOpenOrders?: boolean }> = {},
+  options: Readonly<{
+    updatedSince?: string;
+    includeOpenOrders?: boolean;
+  }> = {},
   client: PrismaClient = prisma,
 ): Promise<readonly TableSummary[]> {
   const principal = requireOperationalReadAccess(context);
@@ -249,9 +258,9 @@ export async function listTables(
   if (updatedSince && !updatedSince.success) {
     throw ApiProblemError.validation([
       {
-        path: 'updatedSince',
-        code: 'invalid_timestamp',
-        message: 'A data deve ser um timestamp UTC válido.',
+        path: "updatedSince",
+        code: "invalid_timestamp",
+        message: "A data deve ser um timestamp UTC válido.",
       },
     ]);
   }
@@ -267,8 +276,8 @@ export async function listTables(
       ? {}
       : {
           orders: {
-            where: { status: 'OPEN', deletedAt: null },
-            orderBy: [{ createdAt: 'asc' as const }, { id: 'asc' as const }],
+            where: { status: "OPEN", deletedAt: null },
+            orderBy: [{ createdAt: "asc" as const }, { id: "asc" as const }],
             select: { id: true, createdAt: true },
           },
         }),
@@ -289,7 +298,7 @@ export async function listTables(
                   {
                     orders: {
                       some: {
-                        status: 'OPEN',
+                        status: "OPEN",
                         deletedAt: null,
                         updatedAt: { gt: since },
                       },
@@ -298,7 +307,7 @@ export async function listTables(
                 ],
               }),
         },
-        orderBy: [{ number: 'asc' }, { id: 'asc' }],
+        orderBy: [{ number: "asc" }, { id: "asc" }],
         select: tableSelect,
       });
 
@@ -307,12 +316,14 @@ export async function listTables(
         number: table.number,
         capacity: table.capacity,
         status:
-          table.status === 'FREE' && 'orders' in table && table.orders.length > 0
-            ? 'OCCUPIED'
+          table.status === "FREE" &&
+          "orders" in table &&
+          table.orders.length > 0
+            ? "OCCUPIED"
             : table.status,
         version: table.version,
         updatedAt: table.updatedAt.toISOString(),
-        openOrders: ('orders' in table ? table.orders : []).map((order) => ({
+        openOrders: ("orders" in table ? table.orders : []).map((order) => ({
           id: order.id,
           createdAt: order.createdAt.toISOString(),
         })),
@@ -336,7 +347,7 @@ export async function listMenuItems(
         deletedAt: null,
         category: { restaurantId: principal.restaurantId, deletedAt: null },
       },
-      orderBy: [{ category: { name: 'asc' } }, { name: 'asc' }, { id: 'asc' }],
+      orderBy: [{ category: { name: "asc" } }, { name: "asc" }, { id: "asc" }],
       select: {
         id: true,
         name: true,
@@ -353,13 +364,13 @@ export async function createMenuItem(
   body: unknown,
   client: PrismaClient = prisma,
 ): Promise<MenuItemSummary> {
-  const principal = requirePermission(context, 'MENU_MANAGE');
-  if (principal.role !== 'ADMIN') {
+  const principal = requirePermission(context, "MENU_MANAGE");
+  if (principal.role !== "ADMIN") {
     throw new ApiProblemError(
       403,
-      'FORBIDDEN',
-      'Acesso negado',
-      'Somente um administrador pode cadastrar produtos.',
+      "FORBIDDEN",
+      "Acesso negado",
+      "Somente um administrador pode cadastrar produtos.",
     );
   }
   const input = parseCreateMenuItemInput(body);
@@ -370,16 +381,16 @@ export async function createMenuItem(
       where: {
         restaurantId: principal.restaurantId,
         deletedAt: null,
-        name: { equals: input.name, mode: 'insensitive' },
+        name: { equals: input.name, mode: "insensitive" },
       },
       select: { id: true },
     });
     if (duplicate) {
       throw new ApiProblemError(
         409,
-        'MENU_ITEM_ALREADY_EXISTS',
-        'Produto já cadastrado',
-        'Já existe um produto ativo com esse nome.',
+        "MENU_ITEM_ALREADY_EXISTS",
+        "Produto já cadastrado",
+        "Já existe um produto ativo com esse nome.",
       );
     }
 
@@ -388,7 +399,7 @@ export async function createMenuItem(
         where: {
           restaurantId: principal.restaurantId,
           deletedAt: null,
-          name: { equals: input.category, mode: 'insensitive' },
+          name: { equals: input.category, mode: "insensitive" },
         },
         select: { id: true },
       })) ??
@@ -434,7 +445,7 @@ export async function listBuffetItems(
         available: true,
         deletedAt: null,
       },
-      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      orderBy: [{ name: "asc" }, { id: "asc" }],
       select: {
         id: true,
         name: true,
@@ -450,13 +461,13 @@ export async function createBuffetItem(
   body: unknown,
   client: PrismaClient = prisma,
 ): Promise<BuffetItemSummary> {
-  const principal = requirePermission(context, 'MENU_MANAGE');
-  if (principal.role !== 'ADMIN') {
+  const principal = requirePermission(context, "MENU_MANAGE");
+  if (principal.role !== "ADMIN") {
     throw new ApiProblemError(
       403,
-      'FORBIDDEN',
-      'Acesso negado',
-      'Somente um administrador pode cadastrar produtos de buffet.',
+      "FORBIDDEN",
+      "Acesso negado",
+      "Somente um administrador pode cadastrar produtos de buffet.",
     );
   }
   const input = parseCreateBuffetItemInput(body);
@@ -467,16 +478,16 @@ export async function createBuffetItem(
       where: {
         restaurantId: principal.restaurantId,
         deletedAt: null,
-        name: { equals: input.name, mode: 'insensitive' },
+        name: { equals: input.name, mode: "insensitive" },
       },
       select: { id: true },
     });
     if (duplicate) {
       throw new ApiProblemError(
         409,
-        'BUFFET_ITEM_ALREADY_EXISTS',
-        'Produto já cadastrado',
-        'Já existe um produto de buffet ativo com esse nome.',
+        "BUFFET_ITEM_ALREADY_EXISTS",
+        "Produto já cadastrado",
+        "Já existe um produto de buffet ativo com esse nome.",
       );
     }
 
@@ -506,7 +517,11 @@ export async function listOrders(
   const principal = requireOperationalReadAccess(context);
   if (options.tableId !== undefined && !isUuidV7(options.tableId)) {
     throw ApiProblemError.validation([
-      { path: 'tableId', code: 'invalid_uuid', message: 'Identificador inválido.' },
+      {
+        path: "tableId",
+        code: "invalid_uuid",
+        message: "Identificador inválido.",
+      },
     ]);
   }
 
@@ -516,11 +531,13 @@ export async function listOrders(
       const orders = await tx.order.findMany({
         where: {
           restaurantId: principal.restaurantId,
-          status: 'OPEN',
+          status: "OPEN",
           deletedAt: null,
-          ...(options.tableId === undefined ? {} : { tableId: options.tableId }),
+          ...(options.tableId === undefined
+            ? {}
+            : { tableId: options.tableId }),
         },
-        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
         select: orderWithItemsSelect,
       });
       return orders.map(toOpenOrderSummary);
@@ -553,7 +570,7 @@ function orderMatchesCreate(
     order.peopleCount === input.peopleCount &&
     order.deviceId === input.deviceId &&
     order.deletedAt === null &&
-    order.status === 'OPEN'
+    order.status === "OPEN"
   );
 }
 
@@ -562,7 +579,7 @@ export async function createOpenOrder(
   body: unknown,
   client: PrismaClient = prisma,
 ): Promise<CreatedOrderResult> {
-  const principal = requirePermission(context, 'ORDERS_CREATE');
+  const principal = requirePermission(context, "ORDERS_CREATE");
   const input = parseCreateOrderInput(body);
 
   try {
@@ -594,9 +611,9 @@ export async function createOpenOrder(
           if (!orderMatchesCreate(existing, principal.restaurantId, input)) {
             throw new ApiProblemError(
               409,
-              'IDEMPOTENCY_CONFLICT',
-              'Conflito de comanda',
-              'O identificador já foi usado para outra criação.',
+              "IDEMPOTENCY_CONFLICT",
+              "Conflito de comanda",
+              "O identificador já foi usado para outra criação.",
             );
           }
           return { order: existing, replayed: true };
@@ -616,9 +633,10 @@ export async function createOpenOrder(
           ) {
             throw ApiProblemError.validation([
               {
-                path: 'comandaNumber',
-                code: 'number_not_configured',
-                message: 'Esse número não está habilitado nas propriedades de comandas.',
+                path: "comandaNumber",
+                code: "number_not_configured",
+                message:
+                  "Esse número não está habilitado nas propriedades de comandas.",
               },
             ]);
           }
@@ -637,17 +655,17 @@ export async function createOpenOrder(
         if (input.tableId && !table) {
           throw new ApiProblemError(
             404,
-            'TABLE_NOT_FOUND',
-            'Mesa não encontrada',
-            'A mesa solicitada não foi encontrada.',
+            "TABLE_NOT_FOUND",
+            "Mesa não encontrada",
+            "A mesa solicitada não foi encontrada.",
           );
         }
-        if (table?.status === 'RESERVED' || table?.status === 'CLOSING') {
+        if (table?.status === "RESERVED" || table?.status === "CLOSING") {
           throw new ApiProblemError(
             409,
-            'TABLE_UNAVAILABLE',
-            'Mesa indisponível',
-            'A mesa não pode receber novas comandas no estado atual.',
+            "TABLE_UNAVAILABLE",
+            "Mesa indisponível",
+            "A mesa não pode receber novas comandas no estado atual.",
           );
         }
 
@@ -660,8 +678,8 @@ export async function createOpenOrder(
             customerId: input.customerId ?? null,
             customerName: input.customerName ?? null,
             peopleCount: input.peopleCount ?? null,
-            status: 'OPEN',
-            total: '0.00',
+            status: "OPEN",
+            total: "0.00",
             deviceId: input.deviceId,
             version: 1,
           },
@@ -683,17 +701,20 @@ export async function createOpenOrder(
             deletedAt: true,
           },
         });
-        if (table && table.status !== 'OCCUPIED') {
+        if (table && table.status !== "OCCUPIED") {
           await tx.table.updateMany({
-            where: { id: table.id, status: 'FREE' },
-            data: { status: 'OCCUPIED', version: { increment: 1 } },
+            where: { id: table.id, status: "FREE" },
+            data: { status: "OCCUPIED", version: { increment: 1 } },
           });
         }
         return { order, replayed: false };
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
     );
-    return { order: toOpenOrderSummary(result.order), replayed: result.replayed };
+    return {
+      order: toOpenOrderSummary(result.order),
+      replayed: result.replayed,
+    };
   } catch (error) {
     if (!isUniqueConstraintError(error)) throw error;
 
@@ -717,7 +738,10 @@ export async function createOpenOrder(
         deletedAt: true,
       },
     });
-    if (existing && orderMatchesCreate(existing, principal.restaurantId, input)) {
+    if (
+      existing &&
+      orderMatchesCreate(existing, principal.restaurantId, input)
+    ) {
       return { order: toOpenOrderSummary(existing), replayed: true };
     }
     if (input.comandaNumber !== null) {
@@ -725,7 +749,7 @@ export async function createOpenOrder(
         where: {
           restaurantId: principal.restaurantId,
           comandaNumber: input.comandaNumber,
-          status: 'OPEN',
+          status: "OPEN",
           deletedAt: null,
         },
         select: { id: true },
@@ -733,17 +757,17 @@ export async function createOpenOrder(
       if (numberConflict) {
         throw new ApiProblemError(
           409,
-          'COMANDA_NUMBER_TAKEN',
-          'Número de comanda indisponível',
-          'Esse número já está sendo usado por uma comanda aberta.',
+          "COMANDA_NUMBER_TAKEN",
+          "Número de comanda indisponível",
+          "Esse número já está sendo usado por uma comanda aberta.",
         );
       }
     }
     throw new ApiProblemError(
       409,
-      'IDEMPOTENCY_CONFLICT',
-      'Conflito de comanda',
-      'O identificador já foi usado para outra criação.',
+      "IDEMPOTENCY_CONFLICT",
+      "Conflito de comanda",
+      "O identificador já foi usado para outra criação.",
     );
   }
 }
@@ -777,7 +801,7 @@ async function readOpenOrder(
   client: PrismaClient | TransactionClient,
 ): Promise<OrderWithItems | null> {
   return client.order.findFirst({
-    where: { id: orderId, restaurantId, status: 'OPEN', deletedAt: null },
+    where: { id: orderId, restaurantId, status: "OPEN", deletedAt: null },
     select: orderWithItemsSelect,
   });
 }
@@ -793,13 +817,15 @@ async function getIdempotentOrderItemResult(
     where: { id: itemId },
     include: {
       menuItem: { select: { name: true } },
-      order: { select: { id: true, restaurantId: true, status: true, deletedAt: true } },
+      order: {
+        select: { id: true, restaurantId: true, status: true, deletedAt: true },
+      },
     },
   });
   if (
     !existing ||
     existing.order.id !== orderId ||
-    existing.order.status !== 'OPEN' ||
+    existing.order.status !== "OPEN" ||
     existing.order.deletedAt !== null ||
     !orderItemMatchesAdd(
       { ...existing, order: { restaurantId: existing.order.restaurantId } },
@@ -838,10 +864,14 @@ export async function addItemToOpenOrder(
   body: unknown,
   client: PrismaClient = prisma,
 ): Promise<AddedOrderItemResult> {
-  const principal = requirePermission(context, 'ORDER_ITEMS_ADD');
+  const principal = requirePermission(context, "ORDER_ITEMS_ADD");
   if (!isUuidV7(orderId)) {
     throw ApiProblemError.validation([
-      { path: 'orderId', code: 'invalid_uuid', message: 'Identificador inválido.' },
+      {
+        path: "orderId",
+        code: "invalid_uuid",
+        message: "Identificador inválido.",
+      },
     ]);
   }
   const input = parseAddOrderItemInput(body);
@@ -863,7 +893,7 @@ export async function addItemToOpenOrder(
           where: {
             id: orderId,
             restaurantId: principal.restaurantId,
-            status: 'OPEN',
+            status: "OPEN",
             deletedAt: null,
           },
           select: { id: true },
@@ -871,9 +901,9 @@ export async function addItemToOpenOrder(
         if (!order) {
           throw new ApiProblemError(
             404,
-            'ORDER_NOT_FOUND',
-            'Comanda não encontrada',
-            'A comanda aberta solicitada não foi encontrada.',
+            "ORDER_NOT_FOUND",
+            "Comanda não encontrada",
+            "A comanda aberta solicitada não foi encontrada.",
           );
         }
 
@@ -890,9 +920,9 @@ export async function addItemToOpenOrder(
         if (!menuItem) {
           throw new ApiProblemError(
             404,
-            'MENU_ITEM_NOT_FOUND',
-            'Produto indisponível',
-            'O produto não está disponível para lançamento.',
+            "MENU_ITEM_NOT_FOUND",
+            "Produto indisponível",
+            "O produto não está disponível para lançamento.",
           );
         }
 
@@ -937,9 +967,9 @@ export async function addItemToOpenOrder(
     if (replay) return replay;
     throw new ApiProblemError(
       409,
-      'IDEMPOTENCY_CONFLICT',
-      'Conflito de item',
-      'O identificador já foi usado para outro lançamento.',
+      "IDEMPOTENCY_CONFLICT",
+      "Conflito de item",
+      "O identificador já foi usado para outro lançamento.",
     );
   }
 }
@@ -947,9 +977,9 @@ export async function addItemToOpenOrder(
 function itemModificationConflict(): ApiProblemError {
   return new ApiProblemError(
     409,
-    'ORDER_ITEM_CONFLICT',
-    'Item alterado',
-    'O item mudou ou já foi enviado à cozinha. Atualize a comanda antes de tentar novamente.',
+    "ORDER_ITEM_CONFLICT",
+    "Item alterado",
+    "O item mudou ou já foi enviado à cozinha. Atualize a comanda antes de tentar novamente.",
   );
 }
 
@@ -964,7 +994,7 @@ async function findEditableOrderItem(
       id: itemId,
       orderId,
       deletedAt: null,
-      order: { is: { restaurantId, status: 'OPEN', deletedAt: null } },
+      order: { is: { restaurantId, status: "OPEN", deletedAt: null } },
     },
     select: {
       id: true,
@@ -979,9 +1009,9 @@ async function findEditableOrderItem(
   if (!item) {
     throw new ApiProblemError(
       404,
-      'ORDER_ITEM_NOT_FOUND',
-      'Item não encontrado',
-      'O item editável não foi encontrado nesta comanda.',
+      "ORDER_ITEM_NOT_FOUND",
+      "Item não encontrado",
+      "O item editável não foi encontrado nesta comanda.",
     );
   }
   if (item.status !== null) throw itemModificationConflict();
@@ -994,11 +1024,13 @@ export async function updatePendingOrderItem(
   itemId: string,
   body: unknown,
   client: PrismaClient = prisma,
-): Promise<Readonly<{ item: OpenOrderSummary['items'][number]; order: OpenOrderSummary }>> {
-  const principal = requirePermission(context, 'ORDERS_EDIT');
+): Promise<
+  Readonly<{ item: OpenOrderSummary["items"][number]; order: OpenOrderSummary }>
+> {
+  const principal = requirePermission(context, "ORDERS_EDIT");
   if (!isUuidV7(orderId) || !isUuidV7(itemId)) {
     throw ApiProblemError.validation([
-      { path: 'id', code: 'invalid_uuid', message: 'Identificador inválido.' },
+      { path: "id", code: "invalid_uuid", message: "Identificador inválido." },
     ]);
   }
   const input = parseUpdateOrderItemInput(body);
@@ -1006,8 +1038,14 @@ export async function updatePendingOrderItem(
   return client.$transaction(
     async (tx) => {
       await assertCurrentPrincipal(tx, principal);
-      const current = await findEditableOrderItem(tx, itemId, orderId, principal.restaurantId);
-      if (current.version !== input.expectedVersion) throw itemModificationConflict();
+      const current = await findEditableOrderItem(
+        tx,
+        itemId,
+        orderId,
+        principal.restaurantId,
+      );
+      if (current.version !== input.expectedVersion)
+        throw itemModificationConflict();
 
       const quantity = new Prisma.Decimal(input.quantity);
       const previousTotal = current.unitPrice.mul(current.quantity);
@@ -1019,7 +1057,13 @@ export async function updatePendingOrderItem(
           version: input.expectedVersion,
           deletedAt: null,
           status: null,
-          order: { is: { restaurantId: principal.restaurantId, status: 'OPEN', deletedAt: null } },
+          order: {
+            is: {
+              restaurantId: principal.restaurantId,
+              status: "OPEN",
+              deletedAt: null,
+            },
+          },
         },
         data: {
           quantity,
@@ -1033,7 +1077,7 @@ export async function updatePendingOrderItem(
         where: {
           id: orderId,
           restaurantId: principal.restaurantId,
-          status: 'OPEN',
+          status: "OPEN",
           deletedAt: null,
         },
         data: {
@@ -1051,7 +1095,10 @@ export async function updatePendingOrderItem(
         readOpenOrder(orderId, principal.restaurantId, tx),
       ]);
       if (!order) throw itemModificationConflict();
-      return { item: toOrderItemSummary(updatedItem), order: toOpenOrderSummary(order) };
+      return {
+        item: toOrderItemSummary(updatedItem),
+        order: toOpenOrderSummary(order),
+      };
     },
     { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
   );
@@ -1064,10 +1111,10 @@ export async function deletePendingOrderItem(
   body: unknown,
   client: PrismaClient = prisma,
 ): Promise<Readonly<{ order: OpenOrderSummary }>> {
-  const principal = requirePermission(context, 'ORDERS_EDIT');
+  const principal = requirePermission(context, "ORDERS_EDIT");
   if (!isUuidV7(orderId) || !isUuidV7(itemId)) {
     throw ApiProblemError.validation([
-      { path: 'id', code: 'invalid_uuid', message: 'Identificador inválido.' },
+      { path: "id", code: "invalid_uuid", message: "Identificador inválido." },
     ]);
   }
   const expectedVersion = parseDeleteOrderItemInput(body);
@@ -1075,7 +1122,12 @@ export async function deletePendingOrderItem(
   return client.$transaction(
     async (tx) => {
       await assertCurrentPrincipal(tx, principal);
-      const current = await findEditableOrderItem(tx, itemId, orderId, principal.restaurantId);
+      const current = await findEditableOrderItem(
+        tx,
+        itemId,
+        orderId,
+        principal.restaurantId,
+      );
       if (current.version !== expectedVersion) throw itemModificationConflict();
 
       const removedTotal = current.unitPrice.mul(current.quantity);
@@ -1086,7 +1138,13 @@ export async function deletePendingOrderItem(
           version: expectedVersion,
           deletedAt: null,
           status: null,
-          order: { is: { restaurantId: principal.restaurantId, status: 'OPEN', deletedAt: null } },
+          order: {
+            is: {
+              restaurantId: principal.restaurantId,
+              status: "OPEN",
+              deletedAt: null,
+            },
+          },
         },
         data: { deletedAt: new Date(), version: { increment: 1 } },
       });
@@ -1096,7 +1154,7 @@ export async function deletePendingOrderItem(
         where: {
           id: orderId,
           restaurantId: principal.restaurantId,
-          status: 'OPEN',
+          status: "OPEN",
           deletedAt: null,
         },
         data: {
@@ -1119,10 +1177,14 @@ export async function closeOrder(
   orderId: string,
   client: PrismaClient = prisma,
 ): Promise<OpenOrderSummary> {
-  const principal = requirePermission(context, 'ORDERS_CLOSE');
+  const principal = requirePermission(context, "ORDERS_CLOSE");
   if (!isUuidV7(orderId)) {
     throw ApiProblemError.validation([
-      { path: 'orderId', code: 'invalid_uuid', message: 'Identificador inválido.' },
+      {
+        path: "orderId",
+        code: "invalid_uuid",
+        message: "Identificador inválido.",
+      },
     ]);
   }
 
@@ -1133,24 +1195,28 @@ export async function closeOrder(
       if (!order) {
         throw new ApiProblemError(
           404,
-          'ORDER_NOT_FOUND',
-          'Comanda não encontrada',
-          'A comanda solicitada não foi encontrada.',
+          "ORDER_NOT_FOUND",
+          "Comanda não encontrada",
+          "A comanda solicitada não foi encontrada.",
         );
       }
-      if (order.status === 'CLOSED') {
+      if (order.status === "CLOSED") {
         throw new ApiProblemError(
           409,
-          'ORDER_ALREADY_CLOSED',
-          'Comanda já fechada',
-          'Essa comanda já foi fechada previamente.',
+          "ORDER_ALREADY_CLOSED",
+          "Comanda já fechada",
+          "Essa comanda já foi fechada previamente.",
         );
       }
 
       // Update order status to CLOSED
       const closedOrder = await tx.order.update({
         where: { id: orderId },
-        data: { status: 'CLOSED', closedAt: new Date(), version: { increment: 1 } },
+        data: {
+          status: "CLOSED",
+          closedAt: new Date(),
+          version: { increment: 1 },
+        },
         select: orderWithItemsSelect,
       });
 
@@ -1174,10 +1240,14 @@ export async function registerPayment(
   body: unknown,
   client: PrismaClient = prisma,
 ): Promise<{ order: OpenOrderSummary; payment: PaymentSummary }> {
-  const principal = requirePermission(context, 'PAYMENTS_RECEIVE');
+  const principal = requirePermission(context, "PAYMENTS_RECEIVE");
   if (!isUuidV7(orderId)) {
     throw ApiProblemError.validation([
-      { path: 'orderId', code: 'invalid_uuid', message: 'Identificador inválido.' },
+      {
+        path: "orderId",
+        code: "invalid_uuid",
+        message: "Identificador inválido.",
+      },
     ]);
   }
 
@@ -1190,29 +1260,34 @@ export async function registerPayment(
       if (!order) {
         throw new ApiProblemError(
           404,
-          'ORDER_NOT_FOUND',
-          'Comanda não encontrada',
-          'A comanda solicitada não foi encontrada.',
+          "ORDER_NOT_FOUND",
+          "Comanda não encontrada",
+          "A comanda solicitada não foi encontrada.",
         );
       }
-      if (order.status === 'CLOSED') {
+      if (order.status === "CLOSED") {
         throw new ApiProblemError(
           409,
-          'ORDER_ALREADY_CLOSED',
-          'Comanda já fechada',
-          'Não é possível registrar pagamento em comanda já fechada.',
+          "ORDER_ALREADY_CLOSED",
+          "Comanda já fechada",
+          "Não é possível registrar pagamento em comanda já fechada.",
         );
       }
 
       // Validate the payment method
       const method = input.method;
-      const allowedMethods = ['dinheiro', 'cartão Crédito', 'cartão Débito', 'PIX'];
+      const allowedMethods = [
+        "dinheiro",
+        "cartão Crédito",
+        "cartão Débito",
+        "PIX",
+      ];
       if (!allowedMethods.includes(method)) {
         throw new ApiProblemError(
           400,
-          'INVALID_PAYMENT_METHOD',
-          'Método de pagamento inválido',
-          'Método de pagamento não é válido. Use: dinheiro, cartão Crédito, cartão Débito ou PIX.',
+          "INVALID_PAYMENT_METHOD",
+          "Método de pagamento inválido",
+          "Método de pagamento não é válido. Use: dinheiro, cartão Crédito, cartão Débito ou PIX.",
         );
       }
 
@@ -1220,20 +1295,20 @@ export async function registerPayment(
       const orderTotal = order.total;
 
       // Validate the amount
-      if (amount.lte(new Prisma.Decimal('0'))) {
+      if (amount.lte(new Prisma.Decimal("0"))) {
         throw new ApiProblemError(
           400,
-          'INVALID_AMOUNT',
-          'Valor inválido',
-          'O valor do pagamento deve ser maior que zero.',
+          "INVALID_AMOUNT",
+          "Valor inválido",
+          "O valor do pagamento deve ser maior que zero.",
         );
       }
       if (amount.gt(orderTotal)) {
         throw new ApiProblemError(
           400,
-          'AMOUNT_EXCEEDS_TOTAL',
-          'Valor acima do total',
-          'O valor do pagamento não pode exceder o total da comanda.',
+          "AMOUNT_EXCEEDS_TOTAL",
+          "Valor acima do total",
+          "O valor do pagamento não pode exceder o total da comanda.",
         );
       }
 
@@ -1243,12 +1318,12 @@ export async function registerPayment(
 
       // If payment equals total, mark order as closed
       const isFullyPaid = amount.eq(orderTotal);
-      const finalStatus: 'OPEN' | 'CLOSED' = isFullyPaid ? 'CLOSED' : 'OPEN';
+      const finalStatus: "OPEN" | "CLOSED" = isFullyPaid ? "CLOSED" : "OPEN";
       if (isFullyPaid && order.tableId) {
         // Also free the table when the order is fully paid.
         await tx.table.update({
           where: { id: order.tableId },
-          data: { status: 'FREE', version: { increment: 1 } },
+          data: { status: "FREE", version: { increment: 1 } },
         });
       }
 
@@ -1270,7 +1345,7 @@ export async function registerPayment(
           amount: amount.toFixed(2),
           method,
           change: change.toFixed(2),
-          status: isFullyPaid ? 'completed' : 'partial',
+          status: isFullyPaid ? "completed" : "partial",
           createdAt: new Date().toISOString(),
         } as PaymentSummary,
       };
@@ -1279,7 +1354,10 @@ export async function registerPayment(
   );
 }
 
-function parseRegisterPaymentInput(body: unknown): { amount: string; method: string } {
+function parseRegisterPaymentInput(body: unknown): {
+  amount: string;
+  method: string;
+} {
   const parsed = RegisterPaymentInputSchema.parse(body);
   return {
     amount: parsed.amount,
@@ -1289,9 +1367,9 @@ function parseRegisterPaymentInput(body: unknown): { amount: string; method: str
 
 const RegisterPaymentInputSchema = z.object({
   amount: z.string().refine((val) => /^\d{1,10}(\.\d{1,2})?$/.test(val), {
-    message: 'Valor deve ser um número decimal válido.',
+    message: "Valor deve ser um número decimal válido.",
   }),
-  method: z.enum(['dinheiro', 'cartão Crédito', 'cartão Débito', 'PIX']),
+  method: z.enum(["dinheiro", "cartão Crédito", "cartão Débito", "PIX"]),
 });
 
 type PaymentSummary = Readonly<{
@@ -1300,10 +1378,9 @@ type PaymentSummary = Readonly<{
   amount: string;
   method: string;
   change: string;
-  status: 'completed' | 'partial';
+  status: "completed" | "partial";
   createdAt: string;
 }>;
-
 
 // ─── Customer ────────────────────────────────────────────────────────────────
 
@@ -1322,7 +1399,13 @@ function toCustomerSummary(c: {
   email: string | null;
   notes: string | null;
 }): CustomerSummary {
-  return { id: c.id, name: c.name, phone: c.phone, email: c.email, notes: c.notes };
+  return {
+    id: c.id,
+    name: c.name,
+    phone: c.phone,
+    email: c.email,
+    notes: c.notes,
+  };
 }
 
 export async function listCustomers(
@@ -1338,10 +1421,10 @@ export async function listCustomers(
         restaurantId: principal.restaurantId,
         deletedAt: null,
         ...(query.search
-          ? { name: { contains: query.search, mode: 'insensitive' } }
+          ? { name: { contains: query.search, mode: "insensitive" } }
           : {}),
       },
-      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      orderBy: [{ name: "asc" }, { id: "asc" }],
       select: { id: true, name: true, phone: true, email: true, notes: true },
     });
     return customers.map(toCustomerSummary);
@@ -1353,7 +1436,7 @@ export async function createCustomer(
   body: unknown,
   client: PrismaClient = prisma,
 ): Promise<CustomerSummary> {
-  const principal = requirePermission(context, 'ORDERS_CREATE');
+  const principal = requirePermission(context, "ORDERS_CREATE");
   const input = parseCreateCustomerInput(body);
   return client.$transaction(async (tx) => {
     await assertCurrentPrincipal(tx, principal);
@@ -1361,7 +1444,7 @@ export async function createCustomer(
       where: {
         restaurantId: principal.restaurantId,
         deletedAt: null,
-        name: { equals: input.name, mode: 'insensitive' },
+        name: { equals: input.name, mode: "insensitive" },
       },
       select: { id: true },
     });
@@ -1397,10 +1480,14 @@ export async function updateOrderDetails(
   body: unknown,
   client: PrismaClient = prisma,
 ): Promise<OpenOrderSummary> {
-  const principal = requirePermission(context, 'ORDERS_CREATE');
+  const principal = requirePermission(context, "ORDERS_CREATE");
   if (!isUuidV7(orderId)) {
     throw ApiProblemError.validation([
-      { path: 'orderId', code: 'invalid_uuid', message: 'Identificador de comanda inválido.' },
+      {
+        path: "orderId",
+        code: "invalid_uuid",
+        message: "Identificador de comanda inválido.",
+      },
     ]);
   }
   const input = parseUpdateOrderDetailsInput(body);
@@ -1411,9 +1498,9 @@ export async function updateOrderDetails(
     if (!order) {
       throw new ApiProblemError(
         404,
-        'ORDER_NOT_FOUND',
-        'Comanda não encontrada',
-        'A comanda não existe ou já foi fechada.',
+        "ORDER_NOT_FOUND",
+        "Comanda não encontrada",
+        "A comanda não existe ou já foi fechada.",
       );
     }
     // Validate customerId if provided
@@ -1428,7 +1515,11 @@ export async function updateOrderDetails(
       });
       if (!customer) {
         throw ApiProblemError.validation([
-          { path: 'customerId', code: 'not_found', message: 'Cliente não encontrado.' },
+          {
+            path: "customerId",
+            code: "not_found",
+            message: "Cliente não encontrado.",
+          },
         ]);
       }
     }

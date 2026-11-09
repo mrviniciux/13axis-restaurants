@@ -38,13 +38,13 @@ Quando houver conflito ou ausência de regra, este documento registra a lacuna e
 - **[PROPOSTA]** Aplicar negação por padrão e checagem de autorização em cada método/ação, inclusive em Server Actions. Validar também a associação do recurso ao único restaurante da instalação; preparar `restaurantId` no domínio não autoriza acesso a outro tenant.
 - **[RECOMENDAÇÃO]** Retornar DTOs mínimos e verificar autorização no acesso ao objeto, não apenas na rota. Para identificadores de mesas/comandas que não pertencem ao escopo do usuário, preferir uma resposta indistinguível de recurso inexistente quando isso reduzir exposição de informação.
 
-| Ação do contrato | ADMIN | MANAGER | WAITER | CASHIER | KITCHEN | BALANÇA |
-|---|---:|---:|---:|---:|---:|---:|
-| Consultar mesas | Sim | **A decidir** | Sim, implícito em “Mesas” (§ 4.1) | **A decidir** | Não definido | **A decidir** |
-| Consultar comandas/pedidos | Sim | **A decidir** | Sim | **A decidir** | Sim, leitura de pedidos | **A decidir** |
-| Abrir/editar comanda e lançar itens | Sim | **A decidir** | Sim | Não definido | Não | **A decidir** |
-| Atualizar estado de item pela cozinha | Sim | Não definido | Não definido | Não definido | Sim | Não definido |
-| Fechar comanda / pagamento | Sim, como “todas” | Não definido | Receber pagamento, sem fechamento explícito na matriz | Sim, fechar comanda | Não | Não definido |
+| Ação do contrato                      |             ADMIN |       MANAGER |                                                WAITER |             CASHIER |                 KITCHEN |       BALANÇA |
+| ------------------------------------- | ----------------: | ------------: | ----------------------------------------------------: | ------------------: | ----------------------: | ------------: |
+| Consultar mesas                       |               Sim | **A decidir** |                     Sim, implícito em “Mesas” (§ 4.1) |       **A decidir** |            Não definido | **A decidir** |
+| Consultar comandas/pedidos            |               Sim | **A decidir** |                                                   Sim |       **A decidir** | Sim, leitura de pedidos | **A decidir** |
+| Abrir/editar comanda e lançar itens   |               Sim | **A decidir** |                                                   Sim |        Não definido |                     Não | **A decidir** |
+| Atualizar estado de item pela cozinha |               Sim |  Não definido |                                          Não definido |        Não definido |                     Sim |  Não definido |
+| Fechar comanda / pagamento            | Sim, como “todas” |  Não definido | Receber pagamento, sem fechamento explícito na matriz | Sim, fechar comanda |                     Não |  Não definido |
 
 “Sim, implícito” deriva apenas do perfil descrito na seção 4.1 e não substitui a decisão de permissão granular. Antes de liberar o MVP, aprovar a matriz completa, principalmente acessos de MANAGER/CASHIER/BALANÇA e se WAITER pode atualizar estados. Não habilitar permissões por conveniência de interface.
 
@@ -206,14 +206,18 @@ Busca alterações canônicas posteriores ao marcador do cliente.
 
   ```json
   {
-    "type": "https://mudra.example/problems/validation",
+    "type": "https://13axis.example/problems/validation",
     "title": "Dados inválidos",
     "status": 422,
     "detail": "Um ou mais campos não atendem ao contrato.",
     "instance": "/api/orders",
     "code": "VALIDATION_FAILED",
     "errors": [
-      { "path": "tableId", "code": "invalid_uuid", "message": "Identificador inválido." }
+      {
+        "path": "tableId",
+        "code": "invalid_uuid",
+        "message": "Identificador inválido."
+      }
     ],
     "requestId": "identificador-de-correlacao"
   }
@@ -223,18 +227,18 @@ Busca alterações canônicas posteriores ao marcador do cliente.
 
 ### 5.2 Mapeamento de status proposto
 
-| HTTP | Quando usar |
-|---:|---|
-| `400 Bad Request` | JSON malformado, query/parâmetro impossível de interpretar ou envelope de sync estruturalmente inválido. |
-| `401 Unauthorized` | Sessão ausente, inválida ou expirada. Para login inválido, mensagem genérica sem revelar existência/estado da conta. |
-| `403 Forbidden` | Sessão válida, mas ação não permitida; pode-se usar `404` para não revelar recurso fora do escopo. |
-| `404 Not Found` | Recurso inexistente ou deliberadamente indistinguível de recurso inacessível. |
-| `409 Conflict` | Versão obsoleta, ID já usado com conteúdo diferente, mutação idempotente repetida com conteúdo diferente ou estado incompatível. Não usar para rejeitar abertura de comanda apenas porque já há outra aberta na mesma mesa. |
-| `413 Content Too Large` | Corpo ou lote acima do limite publicado. |
-| `415 Unsupported Media Type` | Tipo de conteúdo não aceito. |
-| `422 Unprocessable Content` | JSON sintaticamente correto, mas campos ou regra de domínio inválidos. Para lote de sync, usar resultado por mutação, se o envelope for válido. |
-| `429 Too Many Requests` | Limite de chamadas excedido; incluir `Retry-After` quando aplicável. |
-| `500 Internal Server Error` | Falha inesperada; resposta genérica e correlacionável por `requestId`. |
+|                         HTTP | Quando usar                                                                                                                                                                                                                 |
+| ---------------------------: | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|            `400 Bad Request` | JSON malformado, query/parâmetro impossível de interpretar ou envelope de sync estruturalmente inválido.                                                                                                                    |
+|           `401 Unauthorized` | Sessão ausente, inválida ou expirada. Para login inválido, mensagem genérica sem revelar existência/estado da conta.                                                                                                        |
+|              `403 Forbidden` | Sessão válida, mas ação não permitida; pode-se usar `404` para não revelar recurso fora do escopo.                                                                                                                          |
+|              `404 Not Found` | Recurso inexistente ou deliberadamente indistinguível de recurso inacessível.                                                                                                                                               |
+|               `409 Conflict` | Versão obsoleta, ID já usado com conteúdo diferente, mutação idempotente repetida com conteúdo diferente ou estado incompatível. Não usar para rejeitar abertura de comanda apenas porque já há outra aberta na mesma mesa. |
+|      `413 Content Too Large` | Corpo ou lote acima do limite publicado.                                                                                                                                                                                    |
+| `415 Unsupported Media Type` | Tipo de conteúdo não aceito.                                                                                                                                                                                                |
+|  `422 Unprocessable Content` | JSON sintaticamente correto, mas campos ou regra de domínio inválidos. Para lote de sync, usar resultado por mutação, se o envelope for válido.                                                                             |
+|      `429 Too Many Requests` | Limite de chamadas excedido; incluir `Retry-After` quando aplicável.                                                                                                                                                        |
+|  `500 Internal Server Error` | Falha inesperada; resposta genérica e correlacionável por `requestId`.                                                                                                                                                      |
 
 O código HTTP deve manter semântica coerente com o significado HTTP; clientes não devem tomar decisão de retry apenas pela mensagem textual.
 

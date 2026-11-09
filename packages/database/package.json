@@ -1,5 +1,5 @@
 {
-  "name": "@mudra/database",
+  "name": "@13axis/database",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -16,7 +16,7 @@
     "prisma"
   ],
   "scripts": {
-    "build": "pnpm --filter @mudra/shared build && pnpm db:generate && tsc -p tsconfig.build.json",
+    "build": "pnpm --filter @13axis/shared build && pnpm db:generate && tsc -p tsconfig.build.json",
     "db:generate": "prisma generate",
     "db:validate": "prisma validate",
     "db:migrate:dev": "prisma migrate dev",
@@ -31,7 +31,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@mudra/shared": "workspace:*",
+    "@13axis/shared": "workspace:*",
     "@prisma/client": "^6.19.0",
     "argon2": "0.45.1"
   },

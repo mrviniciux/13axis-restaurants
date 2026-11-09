@@ -1,5 +1,5 @@
 {
-  "name": "@mudra/web",
+  "name": "@13axis/web",
   "version": "0.1.0",
   "private": true,
   "engines": {
@@ -14,8 +14,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@mudra/database": "workspace:*",
-    "@mudra/shared": "workspace:*",
+    "@13axis/database": "workspace:*",
+    "@13axis/shared": "workspace:*",
     "jose": "^6.2.15",
     "lucide-react": "^1.66.0",
     "next": "^16.4.3",

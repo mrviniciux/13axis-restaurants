@@ -1,8 +1,8 @@
-# @mudra/database
+# @13axis/database
 
 Prisma/PostgreSQL foundation for the MVP entities. All IDs are caller supplied
 UUID v7 values so a client can create an entity offline; use `createId()` from
-`@mudra/shared`. Prisma intentionally has no `uuid()` default here because that
+`@13axis/shared`. Prisma intentionally has no `uuid()` default here because that
 would generate a different UUID version in some Prisma/database versions.
 
 ## Local commands
@@ -37,26 +37,26 @@ Full reset, including the Docker volume:
 ```powershell
 docker compose down -v
 docker compose up -d --wait postgres
-pnpm --filter @mudra/database db:migrate:deploy
-pnpm --filter @mudra/database db:generate
-pnpm --filter @mudra/database create-admin
+pnpm --filter @13axis/database db:migrate:deploy
+pnpm --filter @13axis/database db:generate
+pnpm --filter @13axis/database create-admin
 ```
 
 Schema-only reset, keeping the PostgreSQL container and volume:
 
 ```powershell
 docker compose up -d --wait postgres
-docker compose exec -T postgres psql -U mudra -d mudra -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
-pnpm --filter @mudra/database db:migrate:deploy
-pnpm --filter @mudra/database create-admin
+docker compose exec -T postgres psql -U 13axis -d 13axis -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+pnpm --filter @13axis/database db:migrate:deploy
+pnpm --filter @13axis/database create-admin
 ```
 
 Prisma can also reset the schema and reapply migrations:
 
 ```powershell
 docker compose up -d --wait postgres
-pnpm --filter @mudra/database exec prisma migrate reset --force --skip-seed
-pnpm --filter @mudra/database create-admin
+pnpm --filter @13axis/database exec prisma migrate reset --force --skip-seed
+pnpm --filter @13axis/database create-admin
 ```
 
 After any reset, recreate the first restaurant/ADMIN with `create-admin`. The
@@ -68,7 +68,7 @@ Apply migrations, then from the repository workspace run:
 
 ```powershell
 $env:DATABASE_URL = "postgresql://..."
-pnpm --filter @mudra/database create-admin
+pnpm --filter @13axis/database create-admin
 ```
 
 The command interactively asks for the restaurant name, administrator email,
@@ -76,7 +76,7 @@ display name, and password. Password input requires a real terminal and is
 read without echo; it is not accepted through command-line arguments or
 environment variables. Argon2id generates a random salt and stores only the
 encoded hash in `User.passwordHash`. The operation creates Restaurant and its
-first ADMIN in one transaction, using UUID v7 IDs from `@mudra/shared`. A
+first ADMIN in one transaction, using UUID v7 IDs from `@13axis/shared`. A
 transaction-scoped advisory lock serializes concurrent bootstrap attempts;
 the command refuses if any Restaurant already exists in the database. It
 prints generated IDs and the email, never the password, hash, database URL, or

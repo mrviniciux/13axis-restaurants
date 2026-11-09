@@ -1,4 +1,4 @@
-# Estratégia de deploy — Mudra for Restaurants
+# Estratégia de deploy — 13axis for Restaurants
 
 **Status:** proposta operacional para o MVP. Os Dockerfiles de produção
 (`apps/web`, `apps/realtime`, `packages/database`), o `compose.yaml`, o
@@ -20,16 +20,16 @@ mesmo servidor e **Redis opcional**. O Railway permanece como alternativa PaaS
 sem operação de servidor (seção 5.4). O app Android é distribuído separadamente
 pelo **Expo EAS**.
 
-| Componente                 | Decisão                                                            | Observação                                                        |
-| -------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------------------- |
-| Web (`apps/web`)           | Next.js 16 (`output: "standalone"`) em container próprio           | Serve UI, API Routes e Auth.js; não usar export estático          |
-| Realtime (`apps/realtime`) | Container Socket.IO independente                                    | WebSocket/WSS público e endpoint interno de publicação            |
-| Banco                      | PostgreSQL 16 em container no servidor                             | Volume persistente; backup automático Hetzner                     |
-| Publicação                 | Coolify self-hosted (grátis)                                        | git push → build Docker, proxy com TLS e health checks            |
-| Redis                      | Opcional no MVP, obrigatório para múltiplas instâncias do realtime | Quando `REDIS_URL` é definido, o realtime não inicia sem Redis    |
-| Mobile (`apps/mobile`)     | Expo EAS Build                                                     | APK interno no piloto; AAB/Play Store depois                      |
-| CI                         | GitHub Actions                                                     | Já executa lint, typecheck, testes e build; deploy via Coolify    |
-| Observabilidade            | Logs do servidor; Sentry previsto                                  | Sentry ainda não está integrado ao código                         |
+| Componente                 | Decisão                                                            | Observação                                                     |
+| -------------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------- |
+| Web (`apps/web`)           | Next.js 16 (`output: "standalone"`) em container próprio           | Serve UI, API Routes e Auth.js; não usar export estático       |
+| Realtime (`apps/realtime`) | Container Socket.IO independente                                   | WebSocket/WSS público e endpoint interno de publicação         |
+| Banco                      | PostgreSQL 16 em container no servidor                             | Volume persistente; backup automático Hetzner                  |
+| Publicação                 | Coolify self-hosted (grátis)                                       | git push → build Docker, proxy com TLS e health checks         |
+| Redis                      | Opcional no MVP, obrigatório para múltiplas instâncias do realtime | Quando `REDIS_URL` é definido, o realtime não inicia sem Redis |
+| Mobile (`apps/mobile`)     | Expo EAS Build                                                     | APK interno no piloto; AAB/Play Store depois                   |
+| CI                         | GitHub Actions                                                     | Já executa lint, typecheck, testes e build; deploy via Coolify |
+| Observabilidade            | Logs do servidor; Sentry previsto                                  | Sentry ainda não está integrado ao código                      |
 
 O modelo atual é **uma instalação por restaurante**: o CLI `create-admin` cria
 um restaurante e seu primeiro `ADMIN` e recusa a operação se já existir
@@ -75,12 +75,12 @@ Fluxos importantes:
 
 ## 3. Ambientes
 
-| Ambiente       | Uso                     | Banco e Redis                                      | Regras                                                                                    |
-| -------------- | ----------------------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Local          | Desenvolvimento         | PostgreSQL do `compose.yaml`                       | Seeds de demonstração permitidos; nunca usar dados reais                                  |
-| Staging        | Validação de release    | Servidor ou banco separados                       | Dados sintéticos ou cópia anonimizada; mesmas variáveis da produção                       |
-| Produção       | Operação do restaurante | PostgreSQL em container com backup Hetzner; Redis somente se necessário | Dados reais, acesso restrito, backup e aprovação de deploy          |
-| Preview por PR | Opcional                | Banco efêmero isolado                              | Não usar segredos nem banco de produção; se não houver isolamento, limitar ao build da CI |
+| Ambiente       | Uso                     | Banco e Redis                                                           | Regras                                                                                    |
+| -------------- | ----------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Local          | Desenvolvimento         | PostgreSQL do `compose.yaml`                                            | Seeds de demonstração permitidos; nunca usar dados reais                                  |
+| Staging        | Validação de release    | Servidor ou banco separados                                             | Dados sintéticos ou cópia anonimizada; mesmas variáveis da produção                       |
+| Produção       | Operação do restaurante | PostgreSQL em container com backup Hetzner; Redis somente se necessário | Dados reais, acesso restrito, backup e aprovação de deploy                                |
+| Preview por PR | Opcional                | Banco efêmero isolado                                                   | Não usar segredos nem banco de produção; se não houver isolamento, limitar ao build da CI |
 
 Staging deve ser o mais próximo possível da produção: mesmas versões de Node,
 pnpm, Next.js e Prisma, mesmas rotas e mesmo tipo de conexão com o banco. Nunca
@@ -139,16 +139,16 @@ CI já definem esses placeholders.
 
 ### 5.2 Comandos por serviço
 
-| Serviço              | Build                                             | Start                                 | Porta                            |
-| -------------------- | ------------------------------------------------- | ------------------------------------- | -------------------------------- |
-| Web                  | `pnpm --filter @mudra/web... build`               | `pnpm --filter @mudra/web start`      | `PORT` do provedor (padrão 3000) |
-| Realtime             | `pnpm --filter @mudra/realtime... build`          | `pnpm --filter @mudra/realtime start` | `SOCKET_IO_PORT`                 |
-| Migração             | `pnpm --filter @mudra/database db:migrate:deploy` | —                                     | —                                |
-| Mobile (verificação) | `pnpm --filter @mudra/mobile build`               | —                                     | —                                |
+| Serviço              | Build                                              | Start                                  | Porta                            |
+| -------------------- | -------------------------------------------------- | -------------------------------------- | -------------------------------- |
+| Web                  | `pnpm --filter @13axis/web... build`               | `pnpm --filter @13axis/web start`      | `PORT` do provedor (padrão 3000) |
+| Realtime             | `pnpm --filter @13axis/realtime... build`          | `pnpm --filter @13axis/realtime start` | `SOCKET_IO_PORT`                 |
+| Migração             | `pnpm --filter @13axis/database db:migrate:deploy` | —                                      | —                                |
+| Mobile (verificação) | `pnpm --filter @13axis/mobile build`               | —                                      | —                                |
 
 O sufixo `...` no filtro do pnpm inclui as dependências do workspace. O build do
-web precisa gerar `@mudra/shared` e `@mudra/database` antes do `next build`; o
-build do realtime precisa gerar `@mudra/shared` antes do `tsc`.
+web precisa gerar `@13axis/shared` e `@13axis/database` antes do `next build`; o
+build do realtime precisa gerar `@13axis/shared` antes do `tsc`.
 
 O comando `pnpm build` da raiz usa Turborepo, mas também compila o export do
 mobile. Para os serviços de produção, prefira os comandos filtrados acima para
@@ -172,15 +172,16 @@ realtime copia o workspace `realtime + shared` com o `dist/` compilado.
    servidor; o Coolify emite e renova o TLS automaticamente.
 4. Criar um projeto com os serviços:
 
-   | Serviço    | Origem                                          | Configuração                                                                |
-   | ---------- | ----------------------------------------------- | --------------------------------------------------------------------------- |
-   | `postgres` | imagem `postgres:16`                            | volume persistente; **sem** porta exposta publicamente                     |
-   | `realtime` | build `apps/realtime/Dockerfile` (contexto raiz) | porta interna 3001; health check `GET /health`                             |
+   | Serviço    | Origem                                           | Configuração                                                                             |
+   | ---------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+   | `postgres` | imagem `postgres:16`                             | volume persistente; **sem** porta exposta publicamente                                   |
+   | `realtime` | build `apps/realtime/Dockerfile` (contexto raiz) | porta interna 3001; health check `GET /health`                                           |
    | `web`      | build `apps/web/Dockerfile` (contexto raiz)      | porta interna 3000; health check `GET /api/health`; build arg `NEXT_PUBLIC_REALTIME_URL` |
-   | `migrate`  | build `packages/database/Dockerfile`            | execução pontual (migrations/CLIs); nunca expor como serviço               |
+   | `migrate`  | build `packages/database/Dockerfile`             | execução pontual (migrations/CLIs); nunca expor como serviço                             |
 
    Em vez de serviços avulsos, o Coolify também aceita apontar para o
    `compose.yaml` do repositório (inclusive o perfil `migrate`).
+
 5. Cadastrar as variáveis da seção 6 no painel de cada serviço (Coolify
    Secret Store), com valores únicos por ambiente.
 6. Manter `web` e `realtime` na mesma rede Docker: o web usa
@@ -201,12 +202,12 @@ reinicia os containers e monitora os health checks. O realtime usa
 Se a operação de servidor não estiver disponível, o Railway mantém o mesmo
 modelo sem servidor:
 
-| Serviço    | Configuração                                                                                                   |
-| ---------- | -------------------------------------------------------------------------------------------------------------- |
-| `web`      | Build e start da tabela 5.2; domínio público `app.exemplo.com`; health check `/api/health`                     |
-| `realtime` | Build e start da tabela 5.2; domínio público `realtime.exemplo.com`; health check `/health`                    |
-| `postgres` | Plugin PostgreSQL 16; rede privada; sem exposição pública                                                      |
-| `redis`    | Opcional; rede privada; somente se houver mais de uma instância do realtime ou necessidade de fan-out          |
+| Serviço    | Configuração                                                                                          |
+| ---------- | ----------------------------------------------------------------------------------------------------- |
+| `web`      | Build e start da tabela 5.2; domínio público `app.exemplo.com`; health check `/api/health`            |
+| `realtime` | Build e start da tabela 5.2; domínio público `realtime.exemplo.com`; health check `/health`           |
+| `postgres` | Plugin PostgreSQL 16; rede privada; sem exposição pública                                             |
+| `redis`    | Opcional; rede privada; somente se houver mais de uma instância do realtime ou necessidade de fan-out |
 
 O web deve usar a URL privada do realtime em `REALTIME_INTERNAL_URL`, por
 exemplo `http://realtime.railway.internal:3001`. O navegador usa
@@ -223,10 +224,10 @@ O repositório versiona um `vercel.json` que publica web e realtime no mesmo
 projeto Vercel como dois serviços (docs:
 <https://vercel.com/docs/services>).
 
-| Serviço    | Root            | Configuração                                                             |
-| ---------- | --------------- | ------------------------------------------------------------------------ |
-| `realtime` | `apps/realtime` | `entrypoint: src/entry.ts`; build `pnpm --filter @mudra/realtime... build` |
-| `web`      | `apps/web`      | `framework: nextjs`; build `node scripts/vercel-web-build.mjs`             |
+| Serviço    | Root            | Configuração                                                                |
+| ---------- | --------------- | --------------------------------------------------------------------------- |
+| `realtime` | `apps/realtime` | `entrypoint: src/entry.ts`; build `pnpm --filter @13axis/realtime... build` |
+| `web`      | `apps/web`      | `framework: nextjs`; build `node scripts/vercel-web-build.mjs`              |
 
 Topologia:
 
@@ -246,7 +247,7 @@ Topologia:
   runtime), `DIRECT_DATABASE_URL` (direta, usada para aplicar migrations antes
   do build web de produção) e `AUTH_SECRET` devem existir como variáveis normais
   do projeto (inclusive no build). O script de build executa `prisma migrate
-  deploy` somente quando `VERCEL_ENV=production`; builds de Preview não alteram
+deploy` somente quando `VERCEL_ENV=production`; builds de Preview não alteram
   o banco. Se `DIRECT_DATABASE_URL` não estiver definida, o script aceita as
   variáveis diretas `STORAGE_PRISMA_DATABASE_URL` ou `STORAGE_POSTGRES_URL` do
   Prisma Storage. `NEXT_PUBLIC_REALTIME_URL` deve ficar **sem**
@@ -259,7 +260,7 @@ Topologia:
 - **Migrações:** o build do serviço web aplica automaticamente migrations
   pendentes em produção usando `DIRECT_DATABASE_URL`, antes de compilar o app.
   Em outros provedores, aplicar manualmente no primeiro deploy (seção 7.3). O
-  seed não interativo: `pnpm --filter @mudra/database seed:admin`.
+  seed não interativo: `pnpm --filter @13axis/database seed:admin`.
 - **Auth.js:** o Auth.js confia no host encaminhado quando `VERCEL=1` está
   presente; `AUTH_TRUST_HOST` é dispensada neste provedor.
 - **CORS:** o browser fala com o mesmo domínio (rewrite), então
@@ -283,19 +284,19 @@ provedor e mantenha conjuntos separados por ambiente.
 
 ### 6.1 Web
 
-| Variável                   | Obrigatória        | Observação                                                           |
-| -------------------------- | ------------------ | -------------------------------------------------------------------- |
-| `DATABASE_URL`             | Sim                | Connection string do PostgreSQL usada em runtime (app/Prisma Client). Com pooler serverless (ex.: Prisma Postgres `pooled.db.prisma.io`), usar a URL *pooled* aqui; TLS quando o provedor exigir |
-| `DIRECT_DATABASE_URL`      | Sim com pooler     | URL **direta** do PostgreSQL para migrações/`db:migrate:deploy`, seed e introspecção (`directUrl` no schema Prisma). Com banco sem pooler (Docker local), pode ser igual a `DATABASE_URL` |
-| `AUTH_SECRET`              | Sim                | Segredo do Auth.js; usar pelo menos 32 bytes aleatórios              |
-| `AUTH_URL`                 | Recomendada        | URL pública canônica, por exemplo `https://app.exemplo.com`          |
-| `AUTH_TRUST_HOST`          | Sim atrás de proxy | Definir `true` para o Auth.js confiar no host encaminhado pelo proxy |
-| `NEXT_PUBLIC_REALTIME_URL` | Sim                | URL pública do Socket.IO; é embutida no bundle no build              |
-| `REALTIME_INTERNAL_URL`    | Sim                | URL interna do realtime para publicação de eventos; no compose: `http://realtime:3001` |
-| `REALTIME_JWT_SECRET`      | Sim                | Mesmo valor usado pelo realtime; pelo menos 32 bytes UTF-8           |
-| `REALTIME_JWT_ISSUER`      | Opcional           | Se definido, precisa ser igual no web e no realtime                  |
-| `REALTIME_JWT_AUDIENCE`    | Opcional           | Se definido, precisa ser igual no web e no realtime                  |
-| `NODE_ENV`                 | Sim                | `production`                                                         |
+| Variável                   | Obrigatória        | Observação                                                                                                                                                                                       |
+| -------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `DATABASE_URL`             | Sim                | Connection string do PostgreSQL usada em runtime (app/Prisma Client). Com pooler serverless (ex.: Prisma Postgres `pooled.db.prisma.io`), usar a URL _pooled_ aqui; TLS quando o provedor exigir |
+| `DIRECT_DATABASE_URL`      | Sim com pooler     | URL **direta** do PostgreSQL para migrações/`db:migrate:deploy`, seed e introspecção (`directUrl` no schema Prisma). Com banco sem pooler (Docker local), pode ser igual a `DATABASE_URL`        |
+| `AUTH_SECRET`              | Sim                | Segredo do Auth.js; usar pelo menos 32 bytes aleatórios                                                                                                                                          |
+| `AUTH_URL`                 | Recomendada        | URL pública canônica, por exemplo `https://app.exemplo.com`                                                                                                                                      |
+| `AUTH_TRUST_HOST`          | Sim atrás de proxy | Definir `true` para o Auth.js confiar no host encaminhado pelo proxy                                                                                                                             |
+| `NEXT_PUBLIC_REALTIME_URL` | Sim                | URL pública do Socket.IO; é embutida no bundle no build                                                                                                                                          |
+| `REALTIME_INTERNAL_URL`    | Sim                | URL interna do realtime para publicação de eventos; no compose: `http://realtime:3001`                                                                                                           |
+| `REALTIME_JWT_SECRET`      | Sim                | Mesmo valor usado pelo realtime; pelo menos 32 bytes UTF-8                                                                                                                                       |
+| `REALTIME_JWT_ISSUER`      | Opcional           | Se definido, precisa ser igual no web e no realtime                                                                                                                                              |
+| `REALTIME_JWT_AUDIENCE`    | Opcional           | Se definido, precisa ser igual no web e no realtime                                                                                                                                              |
+| `NODE_ENV`                 | Sim                | `production`                                                                                                                                                                                     |
 
 Integração **Prisma Postgres** (Vercel Storage): o painel expõe
 `STORAGE_PRISMA_DATABASE_URL`/`STORAGE_POSTGRES_URL` (direta, `db.prisma.io`)
@@ -337,9 +338,9 @@ handshake. Use sempre HTTPS/WSS em produção e não use `*` como origem.
 
 ### 6.3 Migração e bootstrap
 
-| Variável              | Uso                                                                 |
-| --------------------- | ------------------------------------------------------------------- |
-| `DATABASE_URL`        | Runtime do Prisma Client e build; com pooler, usar a URL pooled      |
+| Variável              | Uso                                                                                                     |
+| --------------------- | ------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`        | Runtime do Prisma Client e build; com pooler, usar a URL pooled                                         |
 | `DIRECT_DATABASE_URL` | `prisma migrate deploy` e CLIs (`create-admin`, `seed:admin`) usam a URL direta (`directUrl` no schema) |
 
 O CLI `create-admin` é interativo, solicita a senha no terminal e precisa de um
@@ -373,7 +374,7 @@ somente no servidor e em um secret manager.
 
 ### 7.1 Regras
 
-- Produção usa `pnpm --filter @mudra/database db:migrate:deploy`.
+- Produção usa `pnpm --filter @13axis/database db:migrate:deploy`.
 - Migrações devem usar uma conexão direta com o PostgreSQL, não um pooler em
   modo transaction. O schema declara `directUrl = env("DIRECT_DATABASE_URL")`;
   `prisma migrate deploy` usa essa URL direta. No runtime (Prisma Client),
@@ -407,8 +408,8 @@ Em um banco vazio, a partir de uma máquina com o repositório (desenvolvimento
 ou staging):
 
 ```bash
-pnpm --filter @mudra/database db:migrate:deploy
-pnpm --filter @mudra/database create-admin
+pnpm --filter @13axis/database db:migrate:deploy
+pnpm --filter @13axis/database create-admin
 ```
 
 Somente com Docker (servidor de produção), usar o serviço `migrate` do
@@ -417,14 +418,14 @@ que o `docker compose run` fornece):
 
 ```bash
 docker compose --profile migrate run --rm migrate
-docker compose --profile migrate run --rm migrate pnpm --filter @mudra/database create-admin
+docker compose --profile migrate run --rm migrate pnpm --filter @13axis/database create-admin
 ```
 
 Para cadastro não interativo (recomendado no Vercel, onde não há TTY), usar o
 seed idempotente:
 
 ```bash
-pnpm --filter @mudra/database seed:admin
+pnpm --filter @13axis/database seed:admin
 ```
 
 Ele cria o restaurante e o administrador definidos em
@@ -432,7 +433,7 @@ Ele cria o restaurante e o administrador definidos em
 reaproveita os existentes e confere/redefine a senha do administrador para o
 valor do seed. Revisar a senha antes de expor o ambiente em produção.
 
-O `create-admin` também compila o pacote `@mudra/database`. Execute-o com
+O `create-admin` também compila o pacote `@13axis/database`. Execute-o com
 `DATABASE_URL` apontando para o banco correto. Não execute os seeds
 `seed:demo-*` em produção; eles só funcionam com `NODE_ENV=development` e são
 destinados ao ambiente local.
@@ -461,7 +462,7 @@ do PostgreSQL e com a URL de produção em uma variável protegida). Use a URL
 nativa do PostgreSQL; remova parâmetros específicos do Prisma, como `schema`:
 
 ```bash
-pg_dump "$POSTGRES_URL" --format=custom --file=mudra-backup.dump
+pg_dump "$POSTGRES_URL" --format=custom --file=13axis-backup.dump
 ```
 
 Não versionar arquivos de backup. Restaurar somente com aprovação explícita e
@@ -536,7 +537,7 @@ vazamento.
 
 O app mobile está em modo demonstrativo: não há configuração de EAS, URL de API
 ou sincronização real com o backend. O `app.json` define o pacote
-`com.mudra.restaurants`, mas não define `runtimeVersion`; o `package.json` não
+`com.13axis.restaurants`, mas não define `runtimeVersion`; o `package.json` não
 inclui `expo-updates`. Portanto, OTA ainda não está habilitado.
 
 Não publicar o app como ferramenta operacional até concluir autenticação,
@@ -771,19 +772,19 @@ Executar em staging e produção após cada release:
 
 ## 17. Riscos e pendências
 
-| Risco/pendência                                           | Impacto                                                            | Mitigação                                                            |
-| --------------------------------------------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------- |
-| Sem job de deploy na CI                                   | Deploy depende de webhook/manual no Coolify                        | Habilitar webhook pós-CI verde; automatizar depois                  |
-| Mobile demonstrativo, sem sync/API                        | App não opera de verdade                                           | Manter distribuição interna até concluir integração                  |
-| Sem `eas.json`, `expo-updates` e `runtimeVersion`         | Sem build reproduzível nem OTA seguro                              | Configurar antes do primeiro build de piloto                         |
-| Realtime sem outbox/histórico                             | Eventos podem ser perdidos                                         | Reconciliação por refresh/polling; outbox no futuro                  |
-| Uma instância do realtime                                 | Sem alta disponibilidade                                           | Escalar com Redis + sticky sessions quando necessário                |
-| Redis como dependência dura quando configurado            | Falha de Redis impede startup                                      | Usar somente quando necessário; monitorar e ter plano de recuperação |
-| `REALTIME_JWT_SECRET` também autentica publicação interna | Comprometimento tem impacto amplo                                  | Separar segredo interno no futuro                                    |
-| Sem Sentry/rate limiting de aplicação                     | Diagnóstico e proteção limitados                                   | Logs do provedor + rate limit no proxy; integrar depois              |
-| Migrações forward-only                                    | Rollback de código não desfaz schema                               | Expand/contract, backup e restauração ensaiada                       |
-| Um restaurante por banco                                  | Sem plano multi-tenant                                             | Provisionar projeto/banco por restaurante                            |
-| `create-admin` interativo                                 | Não automatiza bootstrap                                           | Executar uma vez em shell TTY confiável                              |
+| Risco/pendência                                           | Impacto                                     | Mitigação                                                            |
+| --------------------------------------------------------- | ------------------------------------------- | -------------------------------------------------------------------- |
+| Sem job de deploy na CI                                   | Deploy depende de webhook/manual no Coolify | Habilitar webhook pós-CI verde; automatizar depois                   |
+| Mobile demonstrativo, sem sync/API                        | App não opera de verdade                    | Manter distribuição interna até concluir integração                  |
+| Sem `eas.json`, `expo-updates` e `runtimeVersion`         | Sem build reproduzível nem OTA seguro       | Configurar antes do primeiro build de piloto                         |
+| Realtime sem outbox/histórico                             | Eventos podem ser perdidos                  | Reconciliação por refresh/polling; outbox no futuro                  |
+| Uma instância do realtime                                 | Sem alta disponibilidade                    | Escalar com Redis + sticky sessions quando necessário                |
+| Redis como dependência dura quando configurado            | Falha de Redis impede startup               | Usar somente quando necessário; monitorar e ter plano de recuperação |
+| `REALTIME_JWT_SECRET` também autentica publicação interna | Comprometimento tem impacto amplo           | Separar segredo interno no futuro                                    |
+| Sem Sentry/rate limiting de aplicação                     | Diagnóstico e proteção limitados            | Logs do provedor + rate limit no proxy; integrar depois              |
+| Migrações forward-only                                    | Rollback de código não desfaz schema        | Expand/contract, backup e restauração ensaiada                       |
+| Um restaurante por banco                                  | Sem plano multi-tenant                      | Provisionar projeto/banco por restaurante                            |
+| `create-admin` interativo                                 | Não automatiza bootstrap                    | Executar uma vez em shell TTY confiável                              |
 
 ## 18. Referências
 

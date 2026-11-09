@@ -1,17 +1,17 @@
-import 'server-only';
+import "server-only";
 
-import NextAuth, { type DefaultSession } from 'next-auth';
-import Credentials from 'next-auth/providers/credentials';
-import type { NextRequest } from 'next/server';
-import { RoleSchema, type Role } from '@mudra/shared';
-import { prisma } from './lib/server/prisma';
-import { verifyPassword } from '@mudra/database';
-import { requireAuthSecret } from './lib/server/auth-secret';
-import { parseLoginCredentials } from './lib/server/credentials-input';
+import NextAuth, { type DefaultSession } from "next-auth";
+import Credentials from "next-auth/providers/credentials";
+import type { NextRequest } from "next/server";
+import { RoleSchema, type Role } from "@13axis/shared";
+import { prisma } from "./lib/server/prisma";
+import { verifyPassword } from "@13axis/database";
+import { requireAuthSecret } from "./lib/server/auth-secret";
+import { parseLoginCredentials } from "./lib/server/credentials-input";
 
-declare module 'next-auth' {
+declare module "next-auth" {
   interface Session {
-    user: NonNullable<DefaultSession['user']> & {
+    user: NonNullable<DefaultSession["user"]> & {
       id?: string;
       restaurantId?: string;
       role?: Role;
@@ -28,12 +28,12 @@ function createAuth() {
   const secret = requireAuthSecret();
   return NextAuth({
     secret,
-    session: { strategy: 'jwt' },
+    session: { strategy: "jwt" },
     providers: [
       Credentials({
         credentials: {
-          email: { label: 'Email', type: 'email' },
-          password: { label: 'Senha', type: 'password' },
+          email: { label: "Email", type: "email" },
+          password: { label: "Senha", type: "password" },
         },
         async authorize(credentials) {
           const parsed = parseLoginCredentials(credentials);
@@ -41,7 +41,7 @@ function createAuth() {
 
           const user = await prisma.user.findFirst({
             where: {
-              email: { equals: parsed.email, mode: 'insensitive' },
+              email: { equals: parsed.email, mode: "insensitive" },
               deletedAt: null,
               restaurant: { deletedAt: null },
             },
@@ -54,7 +54,10 @@ function createAuth() {
               passwordHash: true,
             },
           });
-          if (!user || !(await verifyPassword(parsed.password, user.passwordHash))) {
+          if (
+            !user ||
+            !(await verifyPassword(parsed.password, user.passwordHash))
+          ) {
             return null;
           }
 
@@ -108,8 +111,8 @@ function createAuth() {
       async session({ session, token }) {
         // JWT claims are untrusted at the boundary and typed as unknown by
         // Auth.js; only copy values that pass the expected runtime schemas.
-        if (typeof token.id === 'string') session.user.id = token.id;
-        if (typeof token.restaurantId === 'string') {
+        if (typeof token.id === "string") session.user.id = token.id;
+        if (typeof token.restaurantId === "string") {
           session.user.restaurantId = token.restaurantId;
         }
         const role = RoleSchema.safeParse(token.role);

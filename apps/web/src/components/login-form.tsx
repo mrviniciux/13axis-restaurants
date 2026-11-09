@@ -43,9 +43,9 @@ export function LoginForm({ redirectTo }: Readonly<{ redirectTo: string }>) {
   return (
     <main className="login-page">
       <section aria-labelledby="login-title" className="login-card">
-        <Link aria-label="Mudra" className="login-brand" href="/">
+        <Link aria-label="13axis" className="login-brand" href="/">
           <span aria-hidden="true" className="brand-mark">M</span>
-          <span className="brand-name">mudra</span>
+          <span className="brand-name">13axis</span>
         </Link>
         <p className="eyebrow">Acesso ao back-office</p>
         <h1 id="login-title">Entrar na sua conta</h1>

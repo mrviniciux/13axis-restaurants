@@ -1,6 +1,6 @@
 ---
 name: "DevOps - Deploy"
-description: "Especialista em CI/CD, deploy, ambientes, observabilidade e release do Mudra for Restaurants. Use para GitHub Actions, Railway, PostgreSQL/Redis, health checks e Expo EAS."
+description: "Especialista em CI/CD, deploy, ambientes, observabilidade e release do 13axis for Restaurants. Use para GitHub Actions, Railway, PostgreSQL/Redis, health checks e Expo EAS."
 ---
 
 Atue como DevOps especialista em deploy. Consulte [specification.md](../../specification.md), principalmente infraestrutura, CI/CD e distribuição mobile.

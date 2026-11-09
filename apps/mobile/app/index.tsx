@@ -140,7 +140,7 @@ function TableComandasDemo({
             <View style={styles.brandMark}>
               <Text style={styles.brandMarkText}>M</Text>
             </View>
-            <Text style={styles.brandName}>mudra</Text>
+            <Text style={styles.brandName}>13axis</Text>
           </View>
           <View style={styles.demoTopBadge}>
             <View style={styles.demoTopDot} />
@@ -335,7 +335,7 @@ export default function TablesHomeScreen() {
             <View style={styles.brandMark}>
               <Text style={styles.brandMarkText}>M</Text>
             </View>
-            <Text style={styles.brandName}>mudra</Text>
+            <Text style={styles.brandName}>13axis</Text>
           </View>
           <View style={styles.demoTopBadge}>
             <View style={styles.demoTopDot} />

@@ -1,10 +1,13 @@
-import 'server-only';
+import "server-only";
 
-import type { PrismaClient } from '@mudra/database';
-import { parseComandaNumbers } from '../comanda-numbers';
-import { requireOperationalReadAccess, type AuthenticatedServerContext } from './access-control';
-import { ApiProblemError } from './problem';
-import { prisma } from './prisma';
+import type { PrismaClient } from "@13axis/database";
+import { parseComandaNumbers } from "../comanda-numbers";
+import {
+  requireOperationalReadAccess,
+  type AuthenticatedServerContext,
+} from "./access-control";
+import { ApiProblemError } from "./problem";
+import { prisma } from "./prisma";
 
 export async function getRestaurantComandaNumbers(
   context: AuthenticatedServerContext,
@@ -15,7 +18,8 @@ export async function getRestaurantComandaNumbers(
     where: { id: principal.restaurantId, deletedAt: null },
     select: { comandaNumbers: true },
   });
-  if (!restaurant) throw new Error('Authenticated restaurant settings are unavailable.');
+  if (!restaurant)
+    throw new Error("Authenticated restaurant settings are unavailable.");
   parseComandaNumbers(restaurant.comandaNumbers);
   return restaurant.comandaNumbers;
 }
@@ -26,12 +30,12 @@ export async function updateRestaurantComandaNumbers(
   client: PrismaClient = prisma,
 ): Promise<string> {
   const principal = requireOperationalReadAccess(context);
-  if (typeof value !== 'string') {
+  if (typeof value !== "string") {
     throw ApiProblemError.validation([
       {
-        path: 'comandaNumbers',
-        code: 'invalid_type',
-        message: 'Informe os números de comanda como texto.',
+        path: "comandaNumbers",
+        code: "invalid_type",
+        message: "Informe os números de comanda como texto.",
       },
     ]);
   }
@@ -40,10 +44,12 @@ export async function updateRestaurantComandaNumbers(
   } catch (error) {
     throw ApiProblemError.validation([
       {
-        path: 'comandaNumbers',
-        code: 'invalid_format',
+        path: "comandaNumbers",
+        code: "invalid_format",
         message:
-          error instanceof Error ? error.message : 'Confira o formato da lista de comandas.',
+          error instanceof Error
+            ? error.message
+            : "Confira o formato da lista de comandas.",
       },
     ]);
   }
@@ -56,9 +62,9 @@ export async function updateRestaurantComandaNumbers(
   if (result.count !== 1) {
     throw new ApiProblemError(
       401,
-      'UNAUTHENTICATED',
-      'Autenticação necessária',
-      'É necessária uma sessão autenticada válida.',
+      "UNAUTHENTICATED",
+      "Autenticação necessária",
+      "É necessária uma sessão autenticada válida.",
     );
   }
   return comandaNumbers;

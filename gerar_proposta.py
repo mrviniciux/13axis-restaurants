@@ -55,7 +55,7 @@ class PDF(FPDF):
         self.set_y(9)
         super().set_font("Helvetica", "I", 7)
         self.set_text_color(*rgb(MUTED))
-        self.cell(0, 4, "Proposta Comercial - Mudra for Restaurants", align="C",
+        self.cell(0, 4, "Proposta Comercial - 13axis for Restaurants", align="C",
                   new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         self.ln(2)
 
@@ -429,6 +429,6 @@ pdf.body(
 )
 
 # ── OUTPUT ────────────────────────────────────────────────────────────────────
-out = r"c:\Software\mudra-for-restaurants\proposta-comercial.pdf"
+out = r"c:\Software\13axis-for-restaurants\proposta-comercial.pdf"
 pdf.output(out)
 print(f"PDF gerado com sucesso: {out}")

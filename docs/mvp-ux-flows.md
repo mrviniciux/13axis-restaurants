@@ -1,4 +1,4 @@
-# Fluxos UX — primeiro produto utilizável do Mudra
+# Fluxos UX — primeiro produto utilizável do 13axis
 
 **Escopo:** back-office web para preparar a operação e acompanhar a cozinha; app Android para o garçom consultar mesas/comandas, lançar itens e encaminhar pedidos.  
 **Base:** `specification.md`, especialmente princípios (1.2), papéis/permissões (4), mesas e comandas (5.1), cardápio (5.2), KDS (5.3), sincronização (7), tempo real (8), acessibilidade (11), roadmap (14) e pontos em aberto (16).  
@@ -116,14 +116,14 @@ A especificação declara web/PWA offline-first, mas também coloca PWA, Service
 
 ### Erros por etapa
 
-| Situação observável | Resposta de interface |
-|---|---|
-| Falha ao carregar mapa/cardápio | Manter dados em cache se existentes e indicar quando foram atualizados; sem cache, explicar o próximo passo. |
-| Falha ao gravar item localmente | Não simular inclusão; manter seleção e oferecer tentar novamente. |
-| Envio pendente sem conexão | Exibir explicitamente se a fila local aceitou o pedido; não informar a cozinha como notificada. |
+| Situação observável                                     | Resposta de interface                                                                                                                          |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Falha ao carregar mapa/cardápio                         | Manter dados em cache se existentes e indicar quando foram atualizados; sem cache, explicar o próximo passo.                                   |
+| Falha ao gravar item localmente                         | Não simular inclusão; manter seleção e oferecer tentar novamente.                                                                              |
+| Envio pendente sem conexão                              | Exibir explicitamente se a fila local aceitou o pedido; não informar a cozinha como notificada.                                                |
 | Servidor rejeita ou retorna comanda já alterada/fechada | Preservar tentativa, mostrar estado atual e solicitar ação humana conforme regra aprovada; não repetir envio automaticamente sem idempotência. |
-| Falha ao salvar formulário web | Manter campos preenchidos, indicar campos inválidos junto ao campo e oferecer nova tentativa. |
-| Falha de login/permissão | Explicar que o acesso não foi concluído e apontar suporte/administração; esconder controles sem permissão. |
+| Falha ao salvar formulário web                          | Manter campos preenchidos, indicar campos inválidos junto ao campo e oferecer nova tentativa.                                                  |
+| Falha de login/permissão                                | Explicar que o acesso não foi concluído e apontar suporte/administração; esconder controles sem permissão.                                     |
 
 ## 6. Acessibilidade e interação
 

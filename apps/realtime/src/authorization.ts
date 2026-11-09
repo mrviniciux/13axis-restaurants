@@ -1,4 +1,4 @@
-import type { Role } from "@mudra/shared";
+import type { Role } from "@13axis/shared";
 import type { RealtimeEventName } from "./events.js";
 
 const RESTAURANT_ROOM_ROLES = [
@@ -35,21 +35,27 @@ export function restaurantRoleRoom(restaurantId: string, role: Role): string {
 }
 
 export function canJoinRestaurantRoom(role: Role): boolean {
-  return RESTAURANT_ROOM_ROLES.includes(role as (typeof RESTAURANT_ROOM_ROLES)[number]);
+  return RESTAURANT_ROOM_ROLES.includes(
+    role as (typeof RESTAURANT_ROOM_ROLES)[number],
+  );
 }
 
 export function canReceiveEvent(role: Role, event: RealtimeEventName): boolean {
   return (EVENT_ROLE_ALLOWLIST[event] as readonly Role[]).includes(role);
 }
 
-export function roomsForIdentity(identity: { restaurantId: string; role: Role }): string[] {
+export function roomsForIdentity(identity: {
+  restaurantId: string;
+  role: Role;
+}): string[] {
   if (!canJoinRestaurantRoom(identity.role)) return [];
 
   const rooms = [
     restaurantRoom(identity.restaurantId),
     restaurantRoleRoom(identity.restaurantId, identity.role),
   ];
-  if (identity.role === "KITCHEN") rooms.push(kitchenRoom(identity.restaurantId));
+  if (identity.role === "KITCHEN")
+    rooms.push(kitchenRoom(identity.restaurantId));
   return rooms;
 }
 

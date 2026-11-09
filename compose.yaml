@@ -6,21 +6,21 @@
 #   docker compose up -d --build
 # Migrações/CLIs (sob demanda):
 #   docker compose --profile migrate run --rm migrate
-#   docker compose --profile migrate run --rm migrate pnpm --filter @mudra/database create-admin
+#   docker compose --profile migrate run --rm migrate pnpm --filter @13axis/database create-admin
 
 services:
   postgres:
     image: postgres:16
     environment:
-      POSTGRES_DB: mudra
-      POSTGRES_USER: mudra
+      POSTGRES_DB: 13axis
+      POSTGRES_USER: 13axis
       POSTGRES_PASSWORD: ${MUDRA_DB_PASSWORD:?Set MUDRA_DB_PASSWORD for the local database}
     ports:
       - "127.0.0.1:55432:5432"
     volumes:
-      - mudra-postgres:/var/lib/postgresql/data
+      - 13axis-postgres:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U mudra -d mudra"]
+      test: ["CMD-SHELL", "pg_isready -U 13axis -d 13axis"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -65,7 +65,7 @@ services:
       NODE_ENV: production
       PORT: "3000"
       HOSTNAME: 0.0.0.0
-      DATABASE_URL: postgresql://mudra:${MUDRA_DB_PASSWORD:?Set MUDRA_DB_PASSWORD in .env}@postgres:5432/mudra?schema=public
+      DATABASE_URL: postgresql://13axis:${MUDRA_DB_PASSWORD:?Set MUDRA_DB_PASSWORD in .env}@postgres:5432/13axis?schema=public
       AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env}
       AUTH_URL: ${AUTH_URL:-http://localhost:3000}
       AUTH_TRUST_HOST: "true"
@@ -101,11 +101,11 @@ services:
       context: .
       dockerfile: packages/database/Dockerfile
     environment:
-      DATABASE_URL: postgresql://mudra:${MUDRA_DB_PASSWORD:?Set MUDRA_DB_PASSWORD in .env}@postgres:5432/mudra?schema=public
+      DATABASE_URL: postgresql://13axis:${MUDRA_DB_PASSWORD:?Set MUDRA_DB_PASSWORD in .env}@postgres:5432/13axis?schema=public
     depends_on:
       postgres:
         condition: service_healthy
     restart: "no"
 
 volumes:
-  mudra-postgres:
+  13axis-postgres:

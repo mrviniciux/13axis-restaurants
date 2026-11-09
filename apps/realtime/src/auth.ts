@@ -1,13 +1,15 @@
-import { RoleSchema, UuidV7Schema, type Role } from "@mudra/shared";
+import { RoleSchema, UuidV7Schema, type Role } from "@13axis/shared";
 import { jwtVerify, type JWTPayload } from "jose";
 import { z } from "zod";
 
-const IdentityClaimsSchema = z.object({
-  userId: UuidV7Schema,
-  restaurantId: UuidV7Schema,
-  role: RoleSchema,
-  exp: z.number().int().positive(),
-}).passthrough();
+const IdentityClaimsSchema = z
+  .object({
+    userId: UuidV7Schema,
+    restaurantId: UuidV7Schema,
+    role: RoleSchema,
+    exp: z.number().int().positive(),
+  })
+  .passthrough();
 
 export type RealtimeIdentity = {
   userId: string;
@@ -25,10 +27,14 @@ export class AuthenticationError extends Error {
 
 export function loadJwtSecret(secret: string | undefined): Uint8Array {
   if (!secret) {
-    throw new Error("REALTIME_JWT_SECRET is required; refusing to start without authentication.");
+    throw new Error(
+      "REALTIME_JWT_SECRET is required; refusing to start without authentication.",
+    );
   }
   if (Buffer.byteLength(secret, "utf8") < 32) {
-    throw new Error("REALTIME_JWT_SECRET must contain at least 32 UTF-8 bytes.");
+    throw new Error(
+      "REALTIME_JWT_SECRET must contain at least 32 UTF-8 bytes.",
+    );
   }
   return new TextEncoder().encode(secret);
 }

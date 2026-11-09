@@ -1,17 +1,20 @@
-import 'server-only';
+import "server-only";
 
-import { RoleSchema } from '@mudra/shared';
-import { auth } from '../../auth';
-import { prisma } from './prisma';
-import { ApiProblemError } from './problem';
-import { requireAuthenticatedContext, type AuthenticatedServerContext } from './access-control';
+import { RoleSchema } from "@13axis/shared";
+import { auth } from "../../auth";
+import { prisma } from "./prisma";
+import { ApiProblemError } from "./problem";
+import {
+  requireAuthenticatedContext,
+  type AuthenticatedServerContext,
+} from "./access-control";
 
 export {
   requireAuthenticatedContext,
   requirePermission,
   requireOperationalReadAccess,
-} from './access-control';
-export type { AuthenticatedServerContext } from './access-control';
+} from "./access-control";
+export type { AuthenticatedServerContext } from "./access-control";
 
 /**
  * Resolve the principal only from the signed server session and current
@@ -38,9 +41,9 @@ export async function getAuthenticatedServerContext(): Promise<AuthenticatedServ
   if (!user) {
     throw new ApiProblemError(
       401,
-      'UNAUTHENTICATED',
-      'Autenticação necessária',
-      'É necessária uma sessão autenticada válida.',
+      "UNAUTHENTICATED",
+      "Autenticação necessária",
+      "É necessária uma sessão autenticada válida.",
     );
   }
 

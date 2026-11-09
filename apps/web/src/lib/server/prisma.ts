@@ -1,6 +1,6 @@
-import 'server-only';
+import "server-only";
 
-import { createPrismaClient, type PrismaClient } from '@mudra/database';
+import { createPrismaClient, type PrismaClient } from "@13axis/database";
 
 const prismaGlobal = globalThis as typeof globalThis & {
   mudraPrisma?: PrismaClient;
@@ -11,4 +11,5 @@ const prismaGlobal = globalThis as typeof globalThis & {
  * hot reloads. The app lifecycle owns the client; request handlers must not
  * disconnect it after each operation.
  */
-export const prisma = prismaGlobal.mudraPrisma ?? (prismaGlobal.mudraPrisma = createPrismaClient());
+export const prisma =
+  prismaGlobal.mudraPrisma ?? (prismaGlobal.mudraPrisma = createPrismaClient());
