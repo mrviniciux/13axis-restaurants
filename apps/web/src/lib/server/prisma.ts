@@ -3,7 +3,7 @@ import "server-only";
 import { createPrismaClient, type PrismaClient } from "@13axis/database";
 
 const prismaGlobal = globalThis as typeof globalThis & {
-  13AXISPrisma?: PrismaClient;
+  __13AXIS_PRISMA?: PrismaClient;
 };
 
 /**
@@ -12,4 +12,4 @@ const prismaGlobal = globalThis as typeof globalThis & {
  * disconnect it after each operation.
  */
 export const prisma =
-  prismaGlobal.13AXISPrisma ?? (prismaGlobal.13AXISPrisma = createPrismaClient());
+  prismaGlobal.__13AXIS_PRISMA ?? (prismaGlobal.__13AXIS_PRISMA = createPrismaClient());
