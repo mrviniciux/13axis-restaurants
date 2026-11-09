@@ -138,7 +138,7 @@ export function createOrdersTablesStore(initial: OrdersTablesStoreInitial) {
     comandasTab: (() => {
       if (typeof window !== 'undefined') {
         try {
-          const saved = window.localStorage.getItem('mudra_comandas_tab');
+          const saved = window.localStorage.getItem('13AXIS_comandas_tab');
           if (
             saved === 'MAP_WITH_CARDS' ||
             saved === 'MAP_WITH_DETAILS' ||
@@ -196,7 +196,7 @@ export function createOrdersTablesStore(initial: OrdersTablesStoreInitial) {
       setComandasTab: (comandasTab) => {
         if (typeof window !== 'undefined') {
           try {
-            window.localStorage.setItem('mudra_comandas_tab', comandasTab);
+            window.localStorage.setItem('13AXIS_comandas_tab', comandasTab);
           } catch {}
         }
         return set({
