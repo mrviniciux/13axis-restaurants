@@ -14,7 +14,7 @@ services:
     environment:
       POSTGRES_DB: 13axis
       POSTGRES_USER: 13axis
-      POSTGRES_PASSWORD: ${13AXIS_DB_PASSWORD:?Set 13AXIS_DB_PASSWORD for the local database}
+      POSTGRES_PASSWORD: ${AXISRES_DB_PASSWORD:?Set AXISRES_DB_PASSWORD for the local database}
     ports:
       - "127.0.0.1:55432:5432"
     volumes:
@@ -65,7 +65,7 @@ services:
       NODE_ENV: production
       PORT: "3000"
       HOSTNAME: 0.0.0.0
-      DATABASE_URL: postgresql://13axis:${13AXIS_DB_PASSWORD:?Set 13AXIS_DB_PASSWORD in .env}@postgres:5432/13axis?schema=public
+      DATABASE_URL: postgresql://13axis:${AXISRES_DB_PASSWORD:?Set AXISRES_DB_PASSWORD in .env}@postgres:5432/13axis?schema=public
       AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env}
       AUTH_URL: ${AUTH_URL:-http://localhost:3000}
       AUTH_TRUST_HOST: "true"
@@ -101,7 +101,7 @@ services:
       context: .
       dockerfile: packages/database/Dockerfile
     environment:
-      DATABASE_URL: postgresql://13axis:${13AXIS_DB_PASSWORD:?Set 13AXIS_DB_PASSWORD in .env}@postgres:5432/13axis?schema=public
+      DATABASE_URL: postgresql://13axis:${AXISRES_DB_PASSWORD:?Set AXISRES_DB_PASSWORD in .env}@postgres:5432/13axis?schema=public
     depends_on:
       postgres:
         condition: service_healthy

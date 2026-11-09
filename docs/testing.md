@@ -15,7 +15,7 @@ web. Não há credenciais padrão: o operador escolhe a senha do ADMIN no CLI.
 Na raiz do workspace, o arquivo `.env` guarda as configurações locais e é
 ignorado pelo Git. Para uma instalação nova, copie o exemplo e substitua os
 valores de exemplo por segredos locais; use uma senha hexadecimal aleatória
-para `13AXIS_DB_PASSWORD` e gere `AUTH_SECRET` com pelo menos 32 bytes aleatórios.
+para `AXISRES_DB_PASSWORD` e gere `AUTH_SECRET` com pelo menos 32 bytes aleatórios.
 Não reutilize credenciais de outros serviços nem compartilhe o `.env`.
 
 ```powershell
@@ -40,7 +40,7 @@ Get-Content .env | ForEach-Object {
 docker compose up -d postgres
 ```
 
-O Next.js carrega o `.env` da raiz ao iniciar. `DATABASE_URL` deve apontar para `127.0.0.1:55432`; a senha nela precisa ser URL-encoded. Mantenha `13AXIS_DB_PASSWORD` igual à senha usada na primeira inicialização do volume PostgreSQL.
+O Next.js carrega o `.env` da raiz ao iniciar. `DATABASE_URL` deve apontar para `127.0.0.1:55432`; a senha nela precisa ser URL-encoded. Mantenha `AXISRES_DB_PASSWORD` igual à senha usada na primeira inicialização do volume PostgreSQL.
 
 Instale dependências e aplique as migrations:
 

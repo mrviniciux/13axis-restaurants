@@ -28,7 +28,7 @@ Na raiz do workspace, copie [.env.example](./.env.example) para `.env` e
 substitua todos os valores de exemplo por segredos locais. Use pelo menos 32
 bytes aleatórios para `AUTH_SECRET` e `REALTIME_JWT_SECRET`. O arquivo `.env`
 é ignorado pelo Git: não o compartilhe nem o inclua em commits.
-Defina `13AXIS_DB_PASSWORD` e a senha em `DATABASE_URL` com o mesmo valor; use
+Defina `AXISRES_DB_PASSWORD` e a senha em `DATABASE_URL` com o mesmo valor; use
 uma senha hexadecimal aleatória ou codifique caracteres especiais para URL.
 
 Em uma instalação nova, carregue o `.env` no terminal, instale as dependências,
