@@ -1,7 +1,14 @@
-# 13axis for Restaurants
+# 13axis Restaurants
 
 Sistema de gestão de restaurante com back-office web e app Android, projetado
 para operação offline-first.
+
+<img width="1514" height="706" alt="Captura de tela 2026-11-10 124516" src="https://github.com/user-attachments/assets/397f0ceb-57d2-4310-a0ba-ee6f6386a7cc" />
+
+
+usuario e senha de teste:
+httpmarks@gmail.com 
+1234
 
 ## Stack e workspaces
 
